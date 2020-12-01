@@ -632,6 +632,12 @@ const Workspaces = signal => ({
         return res.json()
       },
 
+      listSnapshot: async (limit, offset) => {
+        const path = `${root}/snapshots?offset=${offset}&limit=${limit}`
+        const res = await fetchRawls(path, _.merge(authOpts(), { signal }))
+        return res.json()
+      },
+
       submission: submissionId => {
         const submissionPath = `${root}/submissions/${submissionId}`
 
