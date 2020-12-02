@@ -677,6 +677,11 @@ const Workspaces = signal => ({
         return res.json()
       },
 
+      snapshotEntityMetadata: async (billingProject, dataReference) => {
+        const res = await fetchRawls(`${root}/entities?billingProject=${billingProject}&dataReference=${dataReference}`, _.merge(authOpts(), { signal }))
+        return res.json()
+      },
+
       createEntity: async payload => {
         const res = await fetchRawls(`${root}/entities`, _.mergeAll([authOpts(), jsonBody(payload), { signal, method: 'POST' }]))
         return res.json()

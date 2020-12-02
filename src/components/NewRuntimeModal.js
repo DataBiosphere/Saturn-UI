@@ -601,6 +601,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
     }
 
     const renderImageSelect = ({ includeCustom, ...props }) => {
+      console.log(leoImages)
       return h(GroupedSelect, {
         ...props,
         maxMenuHeight: '25rem',

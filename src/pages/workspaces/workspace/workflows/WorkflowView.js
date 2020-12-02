@@ -5,7 +5,18 @@ import { Component, Fragment, useState } from 'react'
 import { b, div, h, label, span } from 'react-hyperscript-helpers'
 import * as breadcrumbs from 'src/components/breadcrumbs'
 import {
-  ButtonPrimary, ButtonSecondary, Clickable, IdContainer, LabeledCheckbox, Link, makeMenuIcon, MenuButton, methodLink, RadioButton, Select,
+  ButtonPrimary,
+  ButtonSecondary,
+  Clickable,
+  GroupedSelect,
+  IdContainer,
+  LabeledCheckbox,
+  Link,
+  makeMenuIcon,
+  MenuButton,
+  methodLink,
+  RadioButton,
+  Select,
   spinnerOverlay
 } from 'src/components/common'
 import Dropzone from 'src/components/Dropzone'
@@ -389,9 +400,8 @@ const WorkflowView = _.flow(
     })
   }
 
-  updateEntityType(selection) {
-    const value = !!selection ? selection.value : undefined
-    this.setState({ selectedEntityType: value })
+  updateEntityType({ value, source } = {}) {
+    this.setState({ selectedEntityType: value, selectedEntitySource: source })
     this.setState(_.set(['modifiedConfig', 'rootEntityType'], value))
     return value
   }
@@ -479,7 +489,7 @@ const WorkflowView = _.flow(
       const selection = workflowSelectionStore.get()
       const readSelection = selectionKey && selection.key === selectionKey
 
-      const snapshots = await Ajax(signal).Workspaces.workspace(namespace, name).listSnapshot(1000, 0)
+      const { resources: snapshots } = await Ajax(signal).Workspaces.workspace(namespace, name).listSnapshot(1000, 0)
 
       // Dockstore users who target floating tags can change their WDL via Github without explicitly selecting a new version in Terra.
       // Before letting the user edit the config we retrieved from the DB, drop any keys that are no longer valid. [WA-291]
@@ -490,10 +500,13 @@ const WorkflowView = _.flow(
         !isRedacted ? filterConfigIO(inputsOutputs) : _.identity
       )(config)
 
+      // const selectedEntitySource =
+
       this.setState({
         savedConfig: config, modifiedConfig,
         currentSnapRedacted: isRedacted, savedSnapRedacted: isRedacted,
         entityMetadata,
+        // selectedEntitySource,
         availableSnapshots: snapshots,
         savedInputsOutputs: inputsOutputs,
         modifiedInputsOutputs: inputsOutputs,
@@ -596,7 +609,6 @@ const WorkflowView = _.flow(
     this.fetchInfo(config)
   })
 
-
   renderSummary() {
     const { workspace: ws, workspace: { workspace }, namespace, name: workspaceName } = this.props
     const {
@@ -607,7 +619,6 @@ const WorkflowView = _.flow(
     const entityTypes = _.keys(entityMetadata)
     const possibleSetTypes = findPossibleSets(entityTypes)
     const modified = !_.isEqual(modifiedConfig, savedConfig)
-    console.log(availableSnapshots)
     const noLaunchReason = Utils.cond(
       [saving || modified, () => 'Save or cancel to Launch Analysis'],
       [!_.isEmpty(errors.inputs) || !_.isEmpty(errors.outputs), () => 'At least one required attribute is missing or invalid'],
@@ -715,11 +726,12 @@ const WorkflowView = _.flow(
                 labelStyle: { marginLeft: '0.5rem' }
               })
             ]),
+            console.log(availableSnapshots),
             this.isMultiple() && div({ style: { display: 'flex', margin: '0.5rem 0 0 2rem' } }, [
               div([
                 div({ style: { height: '2rem', fontWeight: 'bold' } }, ['Step 1']),
                 label(['Select root entity type:']),
-                h(Select, {
+                h(GroupedSelect, {
                   'aria-label': 'Entity type selector',
                   isClearable: false,
                   isDisabled: currentSnapRedacted || this.isSingle() || !!Utils.editWorkspaceError(ws),
@@ -731,7 +743,16 @@ const WorkflowView = _.flow(
                     const value = this.updateEntityType(selection)
                     this.setState({ entitySelectionModel: this.resetSelectionModel(value) })
                   },
-                  options: [...entityTypes, ...possibleSetTypes].sort()
+                  options: [
+                    {
+                      label: 'TABLES',
+                      options: _.map(entityType => ({ value: entityType, source: 'table' }), [...entityTypes, ...possibleSetTypes].sort())
+                    },
+                    ...(!_.isEmpty(availableSnapshots) ? [{
+                      label: 'SNAPSHOTS',
+                      options: _.map(({ name }) => ({ value: name, source: 'snapshot' }), availableSnapshots)
+                    }] : [])
+                  ]
                 })
               ]),
               div({ style: { marginLeft: '2rem', paddingLeft: '2rem', borderLeft: `2px solid ${colors.dark(0.2)}`, flex: 1 } }, [
