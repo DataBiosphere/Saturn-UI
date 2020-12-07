@@ -5,7 +5,7 @@ import { AutoSizer } from 'react-virtualized'
 import * as breadcrumbs from 'src/components/breadcrumbs'
 import { ButtonPrimary, Clickable, Link, spinnerOverlay } from 'src/components/common'
 import { DelayedSearchInput } from 'src/components/input'
-import { collapseStatus, failedIcon, runningIcon, submittedIcon, successIcon } from 'src/components/job-common'
+import { abortIcon, collapseStatus, failedIcon, runningIcon, submittedIcon, successIcon } from 'src/components/job-common'
 import Modal from 'src/components/Modal'
 import { FlexTable, HeaderCell, TextCell, TooltipCell } from 'src/components/table'
 import TooltipTrigger from 'src/components/TooltipTrigger'
@@ -44,31 +44,45 @@ const collapsedStatuses = _.flow(
 )
 
 const statusCell = workflowStatuses => {
-  const { succeeded, failed, running, submitted } = collapsedStatuses(workflowStatuses)
+  const { succeeded, failed, running, submitted, abort } = collapsedStatuses(workflowStatuses)
 
   return h(TooltipTrigger, {
     side: 'bottom',
     type: 'light',
     content: table({ style: { margin: '0.5rem' } }, [
       tbody({}, [
-        tr({}, [
-          td(styles.statusDetailCell, [successIcon()]),
-          td(styles.statusDetailCell, [failedIcon()]),
-          td(styles.statusDetailCell, [runningIcon()]),
-          td(styles.statusDetailCell, [submittedIcon()])
+        submitted && tr({}, [
+          td(styles.statusDetailCell, [submittedIcon()]),
+          td(['Submitted']),
+          td(styles.statusDetailCell, [submitted])
         ]),
-        tr({}, [
-          td(styles.statusDetailCell, [succeeded || 0]),
-          td(styles.statusDetailCell, [failed || 0]),
-          td(styles.statusDetailCell, [running || 0]),
-          td(styles.statusDetailCell, [submitted || 0])
+        running && tr({}, [
+          td(styles.statusDetailCell, [runningIcon()]),
+          td(['Running']),
+          td(styles.statusDetailCell, [running])
+        ]),
+        succeeded && tr({}, [
+          td(styles.statusDetailCell, [successIcon()]),
+          td(['Succeeded']),
+          td(styles.statusDetailCell, [succeeded])
+        ]),
+        failed && tr({}, [
+          td(styles.statusDetailCell, [failedIcon()]),
+          td(['Failed']),
+          td(styles.statusDetailCell, [failed])
+        ]),
+        abort && tr({}, [
+          td(styles.statusDetailCell, [abortIcon()]),
+          td(['Aborted']),
+          td(styles.statusDetailCell, [abort])
         ])
       ])
     ])
   }, [
     div([
-      succeeded && successIcon({ marginRight: '0.5rem' }),
+      succeeded && !failed && !abort && successIcon({ marginRight: '0.5rem' }),
       failed && failedIcon({ marginRight: '0.5rem' }),
+      abort && !failed && abortIcon({ marginRight: '0.5rem' }),
       running && runningIcon({ marginRight: '0.5rem' }),
       submitted && submittedIcon({ marginRight: '0.5rem' })
     ])
@@ -221,8 +235,13 @@ const JobHistory = _.flow(
                 headerRenderer: () => h(HeaderCell, ['Status']),
                 cellRenderer: ({ rowIndex }) => {
                   const { workflowStatuses, status } = filteredSubmissions[rowIndex]
+                  const collapsedStatusList = collapsedStatuses(workflowStatuses)
+                  const statusString =
+                        'failed' in collapsedStatusList ? `Failed` :
+                          'abort' in collapsedStatusList ? 'Aborted' :
+                            status
                   return h(Fragment, [
-                    statusCell(workflowStatuses), _.keys(collapsedStatuses(workflowStatuses)).length === 1 && status
+                    statusCell(workflowStatuses), statusString
                   ])
                 }
               },

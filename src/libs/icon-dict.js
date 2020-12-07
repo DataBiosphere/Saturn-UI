@@ -36,6 +36,7 @@ const custom = _.curry((shape, { size, ...props }) => h(shape,
 const rotate = _.curry((rotation, shape, props) => shape(_.merge({ style: { transform: `rotate(${rotation}deg)` } }, props)))
 
 const iconDict = {
+  abort: fa(faBan),
   'angle-down': rotate(180, custom(angleUp)),
   'angle-left': rotate(-90, custom(angleUp)),
   'angle-right': rotate(90, custom(angleUp)),
