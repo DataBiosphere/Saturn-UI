@@ -46,8 +46,8 @@ import * as Utils from 'src/libs/utils'
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
 
 
-const localVariables = 'localVariables'
-const bucketObjects = '__bucket_objects__'
+export const localVariables = 'localVariables'
+export const bucketObjects = '__bucket_objects__'
 
 const styles = {
   tableContainer: {
@@ -934,7 +934,7 @@ const WorkspaceData = _.flow(
     this.state = {
       firstRender: true,
       refreshKey: 0,
-      selectedDataType,
+      selectedDataType: props.queryParams.initialDataType || selectedDataType,
       entityMetadata,
       importingReference: false,
       deletingReference: undefined
@@ -952,6 +952,10 @@ const WorkspaceData = _.flow(
   })
 
   componentDidMount() {
+    const { queryParams } = this.props
+    if (queryParams.initialDataType) {
+      Nav.history.replace({ search: qs.stringify(_.omit(['initialDataType'], queryParams)) })
+    }
     this.loadMetadata()
     this.setState({ firstRender: false })
   }

@@ -1,9 +1,11 @@
 import FileSaver from 'file-saver'
 import _ from 'lodash/fp'
 import PropTypes from 'prop-types'
+import * as qs from 'qs'
 import { Component, Fragment, useEffect, useState } from 'react'
 import { b, div, h, label, span } from 'react-hyperscript-helpers'
 import * as breadcrumbs from 'src/components/breadcrumbs'
+import Collapse from 'src/components/Collapse'
 import {
   ButtonPrimary, ButtonSecondary, Clickable, IdContainer, LabeledCheckbox, Link, makeMenuIcon, MenuButton, methodLink, RadioButton, Select,
   spinnerOverlay
@@ -13,6 +15,7 @@ import { centeredSpinner, icon } from 'src/components/icons'
 import { DelayedAutocompleteTextArea, DelayedSearchInput } from 'src/components/input'
 import Modal from 'src/components/Modal'
 import PopupTrigger, { InfoBox } from 'src/components/PopupTrigger'
+import { regionInfo } from 'src/components/region-common'
 import StepButtons from 'src/components/StepButtons'
 import { HeaderCell, SimpleFlexTable, SimpleTable, Sortable, TextCell } from 'src/components/table'
 import TooltipTrigger from 'src/components/TooltipTrigger'
@@ -26,6 +29,7 @@ import { workflowSelectionStore } from 'src/libs/state'
 import * as StateHistory from 'src/libs/state-history'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
+import { bucketObjects, localVariables } from 'src/pages/workspaces/workspace/Data'
 import DataStepContent from 'src/pages/workspaces/workspace/workflows/DataStepContent'
 import DeleteWorkflowModal from 'src/pages/workspaces/workspace/workflows/DeleteWorkflowModal'
 import {
@@ -449,7 +453,7 @@ const WorkflowView = _.flow(
   async componentDidMount() {
     const {
       namespace, name, workflowNamespace, workflowName,
-      workspace: { workspace: { attributes } },
+      workspace: { workspace: { attributes, bucketName } },
       signal,
       queryParams: { selectionKey }
     } = this.props
@@ -457,11 +461,13 @@ const WorkflowView = _.flow(
     try {
       const ws = Ajax(signal).Workspaces.workspace(namespace, name)
 
-      const [entityMetadata, validationResponse, config] = await Promise.all([
+      const [entityMetadata, validationResponse, config, bucketLocation] = await Promise.all([
         ws.entityMetadata(),
         this.getValidation(),
-        ws.methodConfig(workflowNamespace, workflowName).get()
+        ws.methodConfig(workflowNamespace, workflowName).get(),
+        ws.checkBucketLocation(bucketName)
       ])
+      this.setState({ bucketLocation })
       const { methodRepoMethod: { methodNamespace, methodName, sourceRepo, methodPath } } = config
       const isRedacted = !validationResponse
 
@@ -585,9 +591,9 @@ const WorkflowView = _.flow(
 
 
   renderSummary() {
-    const { workspace: ws, workspace: { workspace }, namespace, name: workspaceName } = this.props
+    const { workspace: ws, workspace: { workspace, workspace: { bucketName } }, namespace, name: workspaceName } = this.props
     const {
-      modifiedConfig, savedConfig, saving, saved, exporting, copying, deleting, selectingData, activeTab, errors, synopsis, documentation,
+      bucketLocation: { location, locationType } = {}, modifiedConfig, savedConfig, saving, saved, exporting, copying, deleting, selectingData, activeTab, errors, synopsis, documentation,
       selectedEntityType, entityMetadata, entitySelectionModel, versionIds = [], useCallCache, deleteIntermediateOutputFiles, currentSnapRedacted, savedSnapRedacted, wdl
     } = this.state
     const { name, methodRepoMethod: { methodPath, methodVersion, methodNamespace, methodName, sourceRepo }, rootEntityType } = modifiedConfig
@@ -608,6 +614,8 @@ const WorkflowView = _.flow(
     const inputsValid = _.isEmpty(errors.inputs)
     const outputsValid = _.isEmpty(errors.outputs)
     const sourceDisplay = sourceRepo === 'agora' ? `${methodNamespace}/${methodName}/${methodVersion}` : `${methodPath}:${methodVersion}`
+    const { flag: bucketRegionFlag, regionDescription: bucketRegionDescription } = regionInfo(location, locationType)
+
     return div({
       style: {
         position: 'relative',
@@ -771,24 +779,47 @@ const WorkflowView = _.flow(
             }, ['Run analysis'])
           }),
           activeTab === 'outputs' && !currentSnapRedacted && div({ style: { marginBottom: '1rem' } }, [
-            div({ style: styles.outputInfoLabel }, 'Output files will be saved to'),
-            div({ style: { display: 'flex', alignItems: 'center' } }, [
-              div({ style: { flex: 'none', display: 'flex', width: '1.5rem' } }, [icon('folder', { size: 18 })]),
-              div({ style: { flex: 1 } }, [
-                'Files / ',
-                span({ style: styles.placeholder }, 'submission unique ID'),
-                ' / ', wdl ? wdl.match(/^\s*workflow ([^\s{]+)\s*{/m)[1] : span({ style: styles.placeholder }, 'workflow name'), ' / ',
-                span({ style: styles.placeholder }, 'workflow unique ID')
-              ])
-            ]),
-            !!rootEntityType && h(Fragment, [
-              div({ style: { margin: '0.5rem 0', borderBottom: `1px solid ${colors.dark(0.55)}` } }),
-              div({ style: styles.outputInfoLabel }, 'References to outputs will be written to'),
-              div({ style: { display: 'flex', alignItems: 'center' } }, [
-                div({ style: { flex: 'none', display: 'flex', width: '1.5rem' } }, [icon('listAlt')]),
-                `Tables / ${rootEntityType}`
+            h(Collapse, { title: 'Output storage' }, [
+              h(Fragment, [
+                div({ style: styles.outputInfoLabel }, 'Output files will be saved to your workspace bucket:'),
+                div({ style: { display: 'flex', alignItems: 'center', margin: '0.5rem' } }, [
+                  div({ style: { flex: 'none', display: 'flex', width: '1.5rem' } }, [
+                    h(TooltipTrigger, { content: div([`This workspace's bucket is located in: "${bucketRegionDescription}"`]) }, [div(bucketRegionFlag)])
+                  ]),
+                  div({ style: { flex: 1 } }, [`gs://${bucketName}`])
+                ])
               ]),
-              `Fill in the attributes below to add or update columns in your data table`
+              h(Fragment, [
+                div({ style: { margin: '0.5rem 0', borderBottom: `1px solid ${colors.dark(0.55)}` } }),
+                div({ style: styles.outputInfoLabel }, 'Raw outputs will be viewable in the Data tab under:'),
+                div({ style: { display: 'flex', alignItems: 'center' } }, [
+                  div({ style: { flex: 'none', display: 'flex' } }, [
+                    h(Link, {
+                      href: `${Nav.getLink('workspace-data', { namespace, name: workspaceName })}?${qs.stringify({ initialDataType: bucketObjects })}`,
+                      style: { marginRight: '0.5rem' }
+                    }, [icon('folder-open', { style: { marginRight: '0.5rem' } }), 'Files'])
+                  ]),
+                  div({ style: { flex: 1 } }, [
+                    ' / ',
+                    span({ style: styles.placeholder }, '<<unique ID for this submission>>'), ' / ',
+                    wdl ? wdl.match(/^\s*workflow ([^\s{]+)\s*{/m)[1] : span({ style: styles.placeholder }, 'workflow name'), ' / ',
+                    span({ style: styles.placeholder }, '<<unique ID for each workflow>>'), ' / ',
+                    span({ style: styles.placeholder }, '<<call name>>')
+                  ])
+                ])
+              ]),
+              !!rootEntityType && h(Fragment, [
+                div({ style: { margin: '0.5rem 0', borderBottom: `1px solid ${colors.dark(0.55)}` } }),
+                div({ style: styles.outputInfoLabel }, 'References to outputs can be written to'),
+                div({ style: { display: 'flex', alignItems: 'center' } }, [
+                  h(Link, {
+                    href: `${Nav.getLink('workspace-data', { namespace, name: workspaceName })}?${qs.stringify({ initialDataType: localVariables })}`,
+                    style: { marginRight: '0.2rem' }
+                  }, [icon('listAlt', { style: { marginRight: '0.5rem' } }), 'Tables']),
+                  ` / ${rootEntityType}`
+                ]),
+                'Fill in the attributes below to add or update columns in your data table'
+              ])
             ])
           ])
         ])
