@@ -5,7 +5,7 @@ import { Component, Fragment, useEffect, useState } from 'react'
 import { b, div, h, label, span } from 'react-hyperscript-helpers'
 import * as breadcrumbs from 'src/components/breadcrumbs'
 import {
-  ButtonPrimary, ButtonSecondary, Clickable, IdContainer, LabeledCheckbox, Link, makeMenuIcon, MenuButton, methodLink, RadioButton, Select,
+  ButtonPrimary, ButtonSecondary, Clickable, GroupedSelect, IdContainer, LabeledCheckbox, Link, makeMenuIcon, MenuButton, methodLink, RadioButton, Select,
   spinnerOverlay
 } from 'src/components/common'
 import Dropzone from 'src/components/Dropzone'
@@ -29,7 +29,7 @@ import * as Utils from 'src/libs/utils'
 import DataStepContent from 'src/pages/workspaces/workspace/workflows/DataStepContent'
 import DeleteWorkflowModal from 'src/pages/workspaces/workspace/workflows/DeleteWorkflowModal'
 import {
-  chooseRows, chooseSetComponents, chooseSets, processAll, processAllAsSet, processMergedSet
+  chooseRows, chooseSetComponents, chooseSets, chooseSnapshotTable, processAll, processAllAsSet, processMergedSet
 } from 'src/pages/workspaces/workspace/workflows/EntitySelectionType'
 import ExportWorkflowModal from 'src/pages/workspaces/workspace/workflows/ExportWorkflowModal'
 import LaunchAnalysisModal from 'src/pages/workspaces/workspace/workflows/LaunchAnalysisModal'
@@ -321,13 +321,14 @@ const WorkflowView = _.flow(
   }),
   Utils.withCancellationSignal
 )(class WorkflowView extends Component {
-  resetSelectionModel(value, selectedEntities = {}, entityMetadata = this.state.entityMetadata) {
+  resetSelectionModel(value, selectedEntities = {}, entityMetadata = this.state.entityMetadata, selectedEntitySource) {
     const { workflowName } = this.props
 
     // If the default for non-set types changes from `processAllAsSet` then the calculation of `noLaunchReason` in `renderSummary` needs to be updated accordingly.
     // Currently, `renderSummary` assumes that it is not possible to have nothing selected for non-set types.
     return {
       type: Utils.cond(
+        (selectedEntitySource === 'snapshot', () => chooseSnapshotTable),
         [isSet(value), () => _.includes(value, _.keys(entityMetadata)) ? chooseSets : processAllAsSet],
         [_.isEmpty(selectedEntities), () => processAll],
         () => chooseRows
@@ -468,6 +469,9 @@ const WorkflowView = _.flow(
       const inputsOutputs = isRedacted ? {} : await Ajax(signal).Methods.configInputsOutputs(config)
       const selection = workflowSelectionStore.get()
       const readSelection = selectionKey && selection.key === selectionKey
+      const selectedEntitySource = 'none'
+
+      const { resources: snapshots } = await Ajax(signal).Workspaces.workspace(namespace, name).listSnapshot(1000, 0)
 
       // Dockstore users who target floating tags can change their WDL via Github without explicitly selecting a new version in Terra.
       // Before letting the user edit the config we retrieved from the DB, drop any keys that are no longer valid. [WA-291]
@@ -482,10 +486,12 @@ const WorkflowView = _.flow(
         savedConfig: config, modifiedConfig,
         currentSnapRedacted: isRedacted, savedSnapRedacted: isRedacted,
         entityMetadata,
+        availableSnapshots: snapshots,
         savedInputsOutputs: inputsOutputs,
         modifiedInputsOutputs: inputsOutputs,
+        selectedEntitySource: selectedEntitySource,
         errors: isRedacted ? { inputs: {}, outputs: {} } : augmentErrors(validationResponse),
-        entitySelectionModel: this.resetSelectionModel(modifiedConfig.rootEntityType, readSelection ? selection.entities : {}, entityMetadata),
+        entitySelectionModel: this.resetSelectionModel(modifiedConfig.rootEntityType, readSelection ? selection.entities : {}, entityMetadata, selectedEntitySource),
         workspaceAttributes: _.flow(
           _.without(['description']),
           _.remove(s => s.includes(':'))
@@ -587,7 +593,7 @@ const WorkflowView = _.flow(
   renderSummary() {
     const { workspace: ws, workspace: { workspace }, namespace, name: workspaceName } = this.props
     const {
-      modifiedConfig, savedConfig, saving, saved, exporting, copying, deleting, selectingData, activeTab, errors, synopsis, documentation,
+      modifiedConfig, savedConfig, saving, saved, exporting, copying, deleting, selectingData, activeTab, errors, synopsis, documentation, availableSnapshots, selectedEntitySource, snapshotTableNames = [],
       selectedEntityType, entityMetadata, entitySelectionModel, versionIds = [], useCallCache, deleteIntermediateOutputFiles, currentSnapRedacted, savedSnapRedacted, wdl
     } = this.state
     const { name, methodRepoMethod: { methodPath, methodVersion, methodNamespace, methodName, sourceRepo }, rootEntityType } = modifiedConfig
@@ -705,7 +711,7 @@ const WorkflowView = _.flow(
               div([
                 div({ style: { height: '2rem', fontWeight: 'bold' } }, ['Step 1']),
                 label(['Select root entity type:']),
-                h(Select, {
+                h(GroupedSelect, {
                   'aria-label': 'Entity type selector',
                   isClearable: false,
                   isDisabled: currentSnapRedacted || this.isSingle() || !!Utils.editWorkspaceError(ws),
@@ -715,17 +721,27 @@ const WorkflowView = _.flow(
                   value: selectedEntityType,
                   onChange: selection => {
                     const value = this.updateEntityType(selection)
-                    this.setState({ entitySelectionModel: this.resetSelectionModel(value) })
+                    this.setState({ entitySelectionModel: this.resetSelectionModel(value), selectedEntitySource: selection.source })
                   },
-                  options: [...entityTypes, ...possibleSetTypes].sort()
+                  options: [
+                    {
+                      label: 'TABLES',
+                      options: _.map(entityType => ({ value: entityType, source: 'table' }), [...entityTypes, ...possibleSetTypes].sort())
+                    },
+                    ...(!_.isEmpty(availableSnapshots) ? [{
+                      label: 'SNAPSHOTS',
+                      options: _.map(({ name }) => ({ value: name, source: 'snapshot' }), availableSnapshots)
+                    }] : [])
+                  ]
                 })
               ]),
+              console.log(selectedEntitySource),
               div({ style: { marginLeft: '2rem', paddingLeft: '2rem', borderLeft: `2px solid ${colors.dark(0.2)}`, flex: 1 } }, [
                 div({ style: { height: '2rem', fontWeight: 'bold' } }, ['Step 2']),
                 div({ style: { display: 'flex', alignItems: 'center' } }, [
                   h(ButtonPrimary, {
                     disabled: currentSnapRedacted || this.isSingle() || !rootEntityType ||
-                      !_.includes(selectedEntityType, [...entityTypes, ...possibleSetTypes]) || !!Utils.editWorkspaceError(ws),
+                      (!_.includes(selectedEntityType, [...entityTypes, ...possibleSetTypes]) && !(selectedEntitySource === 'snapshot')) || !!Utils.editWorkspaceError(ws), //TODO: clean this up
                     tooltip: Utils.editWorkspaceError(ws),
                     onClick: () => this.setState({ selectingData: true })
                   }, ['Select Data']),
@@ -823,6 +839,7 @@ const WorkflowView = _.flow(
         onSuccess: model => this.setState({ entitySelectionModel: model, selectingData: false }),
         workspace,
         rootEntityType: modifiedConfig.rootEntityType,
+        selectedEntitySource,
         workspaceId: { namespace, name: workspaceName }
       })
     ])

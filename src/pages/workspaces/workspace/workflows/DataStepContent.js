@@ -2,7 +2,7 @@ import _ from 'lodash/fp'
 import PropTypes from 'prop-types'
 import { Component, Fragment } from 'react'
 import { div, h } from 'react-hyperscript-helpers'
-import { ButtonPrimary, IdContainer, RadioButton } from 'src/components/common'
+import { ButtonPrimary, IdContainer, RadioButton, Select } from 'src/components/common'
 import DataTable from 'src/components/DataTable'
 import { ValidatedInput } from 'src/components/input'
 import Modal from 'src/components/Modal'
@@ -10,7 +10,7 @@ import { FormLabel } from 'src/libs/forms'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
 import {
-  chooseRows, chooseSetComponents, chooseSets, processAll, processAllAsSet, processMergedSet
+  chooseRows, chooseSetComponents, chooseSets, processAll, processAllAsSet, processMergedSet, chooseSnapshotTable
 } from 'src/pages/workspaces/workspace/workflows/EntitySelectionType'
 import validate from 'validate.js'
 
@@ -23,11 +23,12 @@ export default class DataStepContent extends Component {
     entitySelectionModel: PropTypes.shape({
       newSetName: PropTypes.string.isRequired,
       selectedElements: PropTypes.array,
-      type: PropTypes.oneOf([processAll, processMergedSet, chooseRows, chooseSets, chooseSetComponents, processAllAsSet])
+      type: PropTypes.oneOf([processAll, processMergedSet, chooseRows, chooseSets, chooseSetComponents, processAllAsSet, chooseSnapshotTable])
     }),
     onDismiss: PropTypes.func,
     onSuccess: PropTypes.func,
     rootEntityType: PropTypes.string,
+    selectedEntitySource: PropTypes.string,
     workspaceId: PropTypes.object
   }
 
@@ -53,12 +54,13 @@ export default class DataStepContent extends Component {
       (type === chooseSets && !!newSetName && selectionSize > 1) ||
       (type === processMergedSet && !!newSetName && selectionSize > 1) ||
       (type === chooseSetComponents && !!newSetName && selectionSize > 0) ||
-      (type === processAllAsSet && !!newSetName)
+      (type === processAllAsSet && !!newSetName) ||
+      (type === chooseSnapshotTable)
   }
 
   render() {
     const {
-      onDismiss, onSuccess,
+      onDismiss, onSuccess, selectedEntitySource,
       workspaceId, entityMetadata, rootEntityType,
       workspace: { attributes: { 'workspace-column-defaults': columnDefaults } }
     } = this.props
@@ -80,6 +82,7 @@ export default class DataStepContent extends Component {
     const isChooseSets = type === chooseSets
     const isChooseSetComponents = type === chooseSetComponents
     const isProcessAllAsSet = type === processAllAsSet
+    const isChooseSnapshotTable = type === chooseSnapshotTable
 
     const errors = validate({ newSetName }, {
       newSetName: {
@@ -139,35 +142,59 @@ export default class DataStepContent extends Component {
               })
             ])
           ]) :
-          h(Fragment, [
-            div([
-              h(RadioButton, {
-                text: `Process all ${rootEntityTypeCount} rows`,
-                name: 'process-rows',
-                checked: isProcessAll,
-                onChange: () => this.setNewSelectionModel({ type: processAll, selectedEntities: {} }),
-                labelStyle: { marginLeft: '0.75rem' }
-              })
-            ]),
-            div([
-              h(RadioButton, {
-                text: 'Choose specific rows to process',
-                name: 'process-rows',
-                checked: isChooseRows,
-                onChange: () => this.setNewSelectionModel({ type: chooseRows, selectedEntities: {} }),
-                labelStyle: { marginLeft: '0.75rem' }
-              })
-            ]),
-            hasSet && div([
-              h(RadioButton, {
-                text: 'Choose existing sets',
-                name: 'process-rows',
-                checked: isProcessMergedSet,
-                onChange: () => this.setNewSelectionModel({ type: processMergedSet, selectedEntities: {} }),
-                labelStyle: { marginLeft: '0.75rem' }
-              })
+          [selectedEntitySource === 'table' ?
+            h(Fragment, [
+              div([
+                h(RadioButton, {
+                  text: `Process all ${rootEntityTypeCount} rows`,
+                  name: 'process-rows',
+                  checked: isProcessAll,
+                  onChange: () => this.setNewSelectionModel({ type: processAll, selectedEntities: {} }),
+                  labelStyle: { marginLeft: '0.75rem' }
+                })
+              ]),
+              div([
+                h(RadioButton, {
+                  text: 'Choose specific rows to process',
+                  name: 'process-rows',
+                  checked: isChooseRows,
+                  onChange: () => this.setNewSelectionModel({ type: chooseRows, selectedEntities: {} }),
+                  labelStyle: { marginLeft: '0.75rem' }
+                })
+              ]),
+              hasSet && div([
+                h(RadioButton, {
+                  text: 'Choose existing sets',
+                  name: 'process-rows',
+                  checked: isProcessMergedSet,
+                  onChange: () => this.setNewSelectionModel({ type: processMergedSet, selectedEntities: {} }),
+                  labelStyle: { marginLeft: '0.75rem' }
+                })
+              ])
+            ]) :
+            h(Fragment, [
+              div({ style: { marginTop: '1rem' } }, [
+                h(FormLabel, { htmlFor: 'foo' }, [
+                  `Select a table in the snapshot to run the analysis:`
+                ]),
+                div([
+                  h(Select, {
+                    'aria-label': 'Entity type selector',
+                    isClearable: false,
+                    isSearchable: true,
+                    placeholder: 'Select table...',
+                    styles: { container: old => ({ ...old, display: 'inline-block', width: 200, marginLeft: '0.5rem' }) },
+                    // value: selectedEntityType,
+                    // onChange: selection => {
+                    //   const value = this.updateEntityType(selection)
+                    //   this.setState({ entitySelectionModel: this.resetSelectionModel(value), selectedEntitySource: selection.source })
+                    // },
+                    options: ['hello', 'world']
+                  })
+                ])
+              ])
             ])
-          ])]),
+          ]]),
         !isProcessAll && !isProcessAllAsSet && div({
           style: {
             display: 'flex', flexDirection: 'column',
@@ -201,7 +228,8 @@ export default class DataStepContent extends Component {
                 [isProcessMergedSet, () => `Selected ${rootEntityType}s will have their membership combined into a new set named:`],
                 [isChooseSetComponents, () => `Selected ${baseEntityType}s will be saved as a new set named:`],
                 [isChooseSets, () => `Selected ${rootEntityType}s will be saved as a new set named:`],
-                [isChooseRows, () => `Selected ${rootEntityType}s will be saved as a new set named:`]
+                [isChooseRows, () => `Selected ${rootEntityType}s will be saved as a new set named:`],
+                [isChooseSnapshotTable, () => `Hello`]
               )
             ]),
             h(ValidatedInput, {
