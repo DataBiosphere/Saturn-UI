@@ -326,16 +326,22 @@ const WorkflowView = _.flow(
 
     // If the default for non-set types changes from `processAllAsSet` then the calculation of `noLaunchReason` in `renderSummary` needs to be updated accordingly.
     // Currently, `renderSummary` assumes that it is not possible to have nothing selected for non-set types.
-    return {
-      type: Utils.cond(
-        (selectedEntitySource === 'snapshot', () => chooseSnapshotTable),
-        [isSet(value), () => _.includes(value, _.keys(entityMetadata)) ? chooseSets : processAllAsSet],
-        [_.isEmpty(selectedEntities), () => processAll],
-        () => chooseRows
-      ),
-      selectedEntities,
-      newSetName: Utils.sanitizeEntityName(`${workflowName}_${new Date().toISOString().slice(0, -5)}`)
-    }
+
+    return (selectedEntitySource === 'table') ?
+      {
+        type: Utils.cond(
+          [isSet(value), () => _.includes(value, _.keys(entityMetadata)) ? chooseSets : processAllAsSet],
+          [_.isEmpty(selectedEntities), () => processAll],
+          () => chooseRows
+        ),
+        selectedEntities,
+        newSetName: Utils.sanitizeEntityName(`${workflowName}_${new Date().toISOString().slice(0, -5)}`)
+      } :
+      {
+        type: chooseSnapshotTable,
+        selectedEntities,
+        newSetName: Utils.sanitizeEntityName(`${workflowName}_${new Date().toISOString().slice(0, -5)}`)
+      }
   }
 
   constructor(props) {
@@ -473,6 +479,8 @@ const WorkflowView = _.flow(
 
       const { resources: snapshots } = await Ajax(signal).Workspaces.workspace(namespace, name).listSnapshot(1000, 0)
 
+      console.log(snapshots)
+
       // Dockstore users who target floating tags can change their WDL via Github without explicitly selecting a new version in Terra.
       // Before letting the user edit the config we retrieved from the DB, drop any keys that are no longer valid. [WA-291]
       // N.B. this causes `config` and `modifiedConfig` to be unequal, so we (accurately) prompt the user to save before launching
@@ -563,7 +571,8 @@ const WorkflowView = _.flow(
       [type === processAllAsSet, () => `1 ${rootEntityType} containing all ${entityMetadata[baseEntityType]?.count || 0} ${baseEntityType}s ${newSetMessage}`],
       [type === chooseSets, () => !!count ?
         `${count} selected ${rootEntityType}s ${newSetMessage}` :
-        `No ${rootEntityType}s selected`]
+        `No ${rootEntityType}s selected`],
+      [type === chooseSnapshotTable, () => `selected snapshot table will be processed`]
     )
   }
 
@@ -721,7 +730,7 @@ const WorkflowView = _.flow(
                   value: selectedEntityType,
                   onChange: selection => {
                     const value = this.updateEntityType(selection)
-                    this.setState({ entitySelectionModel: this.resetSelectionModel(value), selectedEntitySource: selection.source })
+                    this.setState({ entitySelectionModel: this.resetSelectionModel(value, {}, this.state.entityMetadata, selection.source), selectedEntitySource: selection.source })
                   },
                   options: [
                     {

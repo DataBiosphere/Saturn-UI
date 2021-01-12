@@ -60,7 +60,8 @@ export default class DataStepContent extends Component {
 
   render() {
     const {
-      onDismiss, onSuccess, selectedEntitySource,
+      onDismiss, onSuccess,
+      selectedEntitySource, selectedSnapshotTable,
       workspaceId, entityMetadata, rootEntityType,
       workspace: { attributes: { 'workspace-column-defaults': columnDefaults } }
     } = this.props
@@ -173,29 +174,32 @@ export default class DataStepContent extends Component {
               ])
             ]) :
             h(Fragment, [
-              div({ style: { marginTop: '1rem' } }, [
-                h(FormLabel, { htmlFor: 'foo' }, [
-                  `Select a table in the snapshot to run the analysis:`
-                ]),
-                div([
-                  h(Select, {
-                    'aria-label': 'Entity type selector',
-                    isClearable: false,
-                    isSearchable: true,
-                    placeholder: 'Select table...',
-                    styles: { container: old => ({ ...old, display: 'inline-block', width: 200, marginLeft: '0.5rem' }) },
-                    // value: selectedEntityType,
-                    // onChange: selection => {
-                    //   const value = this.updateEntityType(selection)
-                    //   this.setState({ entitySelectionModel: this.resetSelectionModel(value), selectedEntitySource: selection.source })
-                    // },
-                    options: ['hello', 'world']
-                  })
-                ])
-              ])
+              h(IdContainer, [id => div({ style: { marginTop: '0.5rem' } }, [
+                div({ style: { marginTop: '1rem' } }, [
+                  h(FormLabel, { htmlFor: 'foo' }, [
+                    `Select a table in the snapshot to run the analysis:`
+                  ]),
+                  div([
+                    h(Select, {
+                      'aria-label': 'Entity type selector',
+                      isClearable: false,
+                      isSearchable: true,
+                      placeholder: 'Select table...',
+                      styles: { container: old => ({ ...old, display: 'inline-block', width: 200, marginLeft: '0.5rem' }) },
+                      value: selectedSnapshotTable,
+                      onChange: selection => {
+                        console.log(selection)
+                        // const value = this.updateEntityType(selection)
+                        // this.setState({ entitySelectionModel: this.resetSelectionModel(value), selectedEntitySource: selection.source })
+                      },
+                      options: ['hello', 'world']
+                    })
+                  ])
+                ])]
+              )])
             ])
           ]]),
-        !isProcessAll && !isProcessAllAsSet && div({
+        !isProcessAll && !isProcessAllAsSet && (selectedEntitySource === 'table') && div({
           style: {
             display: 'flex', flexDirection: 'column',
             height: 500, marginTop: '1rem'
