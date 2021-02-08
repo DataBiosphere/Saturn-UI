@@ -1,5 +1,5 @@
 import { Fragment } from 'react'
-import { div, h } from 'react-hyperscript-helpers'
+import { div, h, span } from 'react-hyperscript-helpers'
 import { Link } from 'src/components/common'
 import { icon } from 'src/components/icons'
 import colors from 'src/libs/colors'
@@ -48,26 +48,35 @@ export const runningIcon = style => icon('sync', { size, style: { color: colors.
 export const submittedIcon = style => icon('clock', { size, style: { color: colors.dark(), ...style } })
 export const unknownIcon = style => icon('question', { size, style: { color: colors.dark(), ...style } })
 
-export const statusIcon = (status, style) => {
-  switch (collapseStatus(status)) {
+export const statusIcon = (status, style, collapseFunction = collapseStatus) => {
+  switch (collapseFunction(status)) {
     case 'succeeded':
       return successIcon(style)
     case 'failed':
       return failedIcon(style)
     case 'running':
       return runningIcon(style)
-    default:
+    case 'submitted':
       return submittedIcon(style)
+    default:
+      return unknownIcon(style)
   }
 }
 
-export const makeStatusLine = (iconFn, text) => div({ style: { display: 'flex', marginTop: '0.5rem', fontSize: 14 } }, [
+export const cromwellExecutionStatusIcon = (status, style) => statusIcon(status, style, collapseCromwellExecutionStatus)
+
+export const makeStatusLine = (iconFn, text, style) => div({ style: { display: 'flex', alignItems: 'center', fontSize: 14, textTransform: 'capitalize', ...style } }, [
   iconFn({ marginRight: '0.5rem' }), text
 ])
 
+export const makeCromwellStatusLine = cromwellStatus => {
+  const collapsedStatus = collapseCromwellExecutionStatus(cromwellStatus)
+  return makeStatusLine(style => cromwellExecutionStatusIcon(cromwellStatus, style), collapsedStatus, { marginLeft: '0.5rem' })
+}
+
 export const makeSection = (label, children) => div({
   style: {
-    flex: '0 0 33%', padding: '0 0.5rem 0.5rem',
+    flex: '0 0 33%', padding: '0 0.5rem 0.5rem', marginTop: '1rem',
     whiteSpace: 'pre', textOverflow: 'ellipsis', overflow: 'hidden'
   }
 }, [
@@ -75,7 +84,7 @@ export const makeSection = (label, children) => div({
   h(Fragment, children)
 ])
 
-const breadcrumbHistoryCaret = icon('angle-right', { size: 10, style: { margin: '0 0.25rem' } })
+export const breadcrumbHistoryCaret = icon('angle-right', { size: 10, style: { margin: '0 0.25rem' } })
 
 export const jobHistoryBreadcrumbPrefix = (namespace, workspaceName) => {
   return h(Fragment, [
@@ -86,20 +95,39 @@ export const jobHistoryBreadcrumbPrefix = (namespace, workspaceName) => {
   ])
 }
 
+const breadcrumbLink = (title, link) => [
+  h(Link, {
+    href: link
+  }, [title]),
+  breadcrumbHistoryCaret
+]
+
+const breadcrumbPageTitle = title => div({ style: Style.elements.sectionHeader }, [title])
+
+const breadcrumbSubtitleStyle = { marginBottom: '0.5rem', display: 'flex', alignItems: 'center' }
+
 export const submissionDetailsBreadcrumbSubtitle = (namespace, workspaceName, submissionId) => {
-  return div({ style: { marginBottom: '1rem', display: 'flex', alignItems: 'center' } }, [
+  return div({ style: breadcrumbSubtitleStyle }, [
     jobHistoryBreadcrumbPrefix(namespace, workspaceName),
-    div({ style: Style.elements.sectionHeader }, [`Submission ${submissionId}`])
+    breadcrumbPageTitle(`Submission ${submissionId}`)
   ])
 }
 
 export const workflowDetailsBreadcrumbSubtitle = (namespace, workspaceName, submissionId, workflowId) => {
-  return div({ style: { marginBottom: '1rem', display: 'flex', alignItems: 'center' } }, [
+  return div({ style: breadcrumbSubtitleStyle }, [
     jobHistoryBreadcrumbPrefix(namespace, workspaceName),
-    h(Link, {
-      href: Nav.getLink('workspace-submission-details', { namespace, name: workspaceName, submissionId })
-    }, [`Submission ${submissionId}`]),
-    breadcrumbHistoryCaret,
-    div({ style: Style.elements.sectionHeader }, [`Workflow ${workflowId}`])
+    breadcrumbLink(`Submission ${submissionId}`, Nav.getLink('workspace-submission-details', { namespace, name: workspaceName, submissionId })),
+    breadcrumbPageTitle(`Workflow ${workflowId}`)
+  ])
+}
+
+export const callDetailsBreadcrumbSubtitle = (namespace, workspaceName, submissionId, workflowId, callFqn, index, attempt) => {
+  return div({ style: breadcrumbSubtitleStyle }, [
+    jobHistoryBreadcrumbPrefix(namespace, workspaceName),
+    breadcrumbLink(`Submission ${submissionId}`, Nav.getLink('workspace-submission-details', { namespace, name: workspaceName, submissionId })),
+    breadcrumbLink(`Workflow ${workflowId}`, Nav.getLink('workspace-workflow-dashboard', { namespace, name: workspaceName, submissionId, workflowId })),
+    breadcrumbPageTitle(['Call ', span({ style: Style.codeFont }, [callFqn])]),
+    index !== '-1' ? [breadcrumbHistoryCaret, breadcrumbPageTitle(`index ${index}`)] : [],
+    Number(attempt) > 1 ? [breadcrumbHistoryCaret, breadcrumbPageTitle(`attempt ${attempt}`)] : []
   ])
 }

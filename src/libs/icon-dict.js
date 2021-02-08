@@ -1,9 +1,9 @@
 import { faClipboard, faClock, faClone, faEye, faFileAlt, faFolder, faFolderOpen, faListAlt, faTimesCircle } from '@fortawesome/free-regular-svg-icons'
 import {
-  faArrowLeft, faArrowRight, faBan, faCaretDown, faChalkboard, faCheck, faCheckCircle, faCircle, faCloud, faCog, faCreditCard, faDownload,
+  faArrowLeft, faArrowRight, faBan, faCaretDown, faChalkboard, faCheck, faCheckCircle, faCircle, faCloud, faCodeBranch, faCog, faCreditCard, faDownload,
   faEllipsisV, faExclamationCircle, faExclamationTriangle, faFileInvoiceDollar, faGripHorizontal, faInfoCircle, faLock, faLongArrowAltDown,
-  faLongArrowAltUp, faMinusCircle, faPause, faPen, faPlay, faPlus, faPlusCircle, faQuestion, faQuestionCircle, faSearch, faShareAlt, faSquare as faSquareSolid,
-  faTachometerAlt, faTasks, faTerminal, faTrashAlt, faVirus
+  faLongArrowAltUp, faMagic, faMinusCircle, faPause, faPen, faPlay, faPlus, faPlusCircle, faQuestion, faQuestionCircle, faSearch, faShareAlt,
+  faSquare as faSquareSolid, faTachometerAlt, faTasks, faTerminal, faTrashAlt, faVirus
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import _ from 'lodash/fp'
@@ -54,6 +54,7 @@ const iconDict = {
   check: fa(faCheck),
   clock: fa(faClock),
   cloud: fa(faCloud),
+  'code-branch': fa(faCodeBranch),
   cog: fa(faCog),
   columnGrabber: custom(columnGrabber),
   copy: fa(faClone),
@@ -81,6 +82,7 @@ const iconDict = {
   lock: fa(faLock),
   'long-arrow-alt-down': fa(faLongArrowAltDown),
   'long-arrow-alt-up': fa(faLongArrowAltUp),
+  magic: fa(faMagic),
   'minus-circle': fa(faMinusCircle),
   pause: fa(faPause),
   play: fa(faPlay),

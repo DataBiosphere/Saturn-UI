@@ -11,6 +11,8 @@ export const proportionalNumbers = { fontVariantNumeric: 'proportional-nums', fo
 
 export const noWrapEllipsis = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
+export const codeFont = { fontFamily: 'Courier New' }
+
 export const elements = {
   card: {
     title: { color: colors.accent(), fontSize: 16, overflow: 'hidden' },

@@ -130,6 +130,7 @@ const fetchSam = _.flow(withUrlPrefix(`${getConfig().samUrlRoot}/`), withAppIden
 const fetchBuckets = _.flow(withRequesterPays, withUrlPrefix('https://storage.googleapis.com/'))(fetchOk)
 const fetchGoogleBilling = withUrlPrefix('https://cloudbilling.googleapis.com/v1/', fetchOk)
 const fetchRawls = _.flow(withUrlPrefix(`${getConfig().rawlsUrlRoot}/api/`), withAppIdentifier)(fetchOk)
+const fetchCromIAM = _.flow(withUrlPrefix(`${getConfig().orchestrationUrlRoot}/api/`), withAppIdentifier)(fetchOk)
 const fetchDataRepo = withUrlPrefix(`${getConfig().dataRepoUrlRoot}/api/`, fetchOk)
 const fetchLeo = withUrlPrefix(`${getConfig().leoUrlRoot}/`, fetchOk)
 const fetchDockstore = withUrlPrefix(`${getConfig().dockstoreUrlRoot}/api/`, fetchOk)
@@ -501,6 +502,26 @@ const attributesUpdateOps = _.flow(
   })
 )
 
+const CromIAM = signal => ({
+  callCacheDiff: async (thisWorkflowId, thisCallFqn, thisIndex, thatWorkflowId, thatCallFqn, thatIndex) => {
+    const params = {
+      workflowA: thisWorkflowId,
+      callA: thisCallFqn,
+      indexA: (thisIndex !== -1) ? thisIndex : undefined,
+      workflowB: thatWorkflowId,
+      callB: thatCallFqn,
+      indexB: (thatIndex !== -1) ? thatIndex : undefined
+    }
+    const res = await fetchCromIAM(`workflows/v1/callcaching/diff?${qs.stringify(params)}`, _.merge(authOpts(), { signal }))
+    return res.json()
+  },
+
+  workflowMetadata: async (workflowId, includeKey, excludeKey) => {
+    const res = await fetchCromIAM(`workflows/v1/${workflowId}/metadata?${qs.stringify({ includeKey, excludeKey }, { arrayFormat: 'repeat' })}`, _.merge(authOpts(), { signal }))
+    return res.json()
+  }
+})
+
 const Workspaces = signal => ({
   list: async fields => {
     const res = await fetchRawls(`workspaces?${qs.stringify({ fields }, { arrayFormat: 'comma' })}`, _.merge(authOpts(), { signal }))
@@ -655,9 +676,38 @@ const Workspaces = signal => ({
             return fetchRawls(submissionPath, _.merge(authOpts(), { signal, method: 'DELETE' }))
           },
 
-          getWorkflow: async (workflowId, includeKey) => {
-            const res = await fetchRawls(`${submissionPath}/workflows/${workflowId}?${qs.stringify({ includeKey }, { arrayFormat: 'repeat' })}`, _.merge(authOpts(), { signal }))
+          getWorkflow: async (workflowId, includeKey, excludeKey) => {
+            const res = await fetchRawls(`${submissionPath}/workflows/${workflowId}?${qs.stringify({ includeKey, excludeKey }, { arrayFormat: 'repeat' })}`, _.merge(authOpts(), { signal }))
             return res.json()
+          },
+
+          workflow: workflowId => {
+            return {
+              workflow_metadata: async (includeKey, excludeKey) => {
+                const res = await fetchRawls(`${submissionPath}/workflows/${workflowId}?${qs.stringify({ includeKey, excludeKey }, { arrayFormat: 'repeat' })}`, _.merge(authOpts(), { signal }))
+                return res.json()
+              },
+
+              call: (callFqn, index, attempt) => {
+                return {
+                  call_metadata: async (includeKey, excludeKey) => {
+                    // TODO: While Cromwell does not support query-by-FQN on the metadata API this method is going to _SUCK_!
+                    const res = await fetchRawls(`${submissionPath}/workflows/${workflowId}?${qs.stringify({ includeKey, excludeKey }, { arrayFormat: 'repeat' })}`, _.merge(authOpts(), { signal }))
+                    const asJson = await res.json()
+                    console.log(asJson)
+                    const { calls: { [callFqn]: callObjects } = {} } = asJson
+                    console.log(callObjects)
+                    const firstValid = _.find(co => {
+                      const { shardIndex, attempt: att } = co
+                      return shardIndex.toString() === index.toString() && att.toString() === attempt.toString()
+                    })
+
+                    console.log(firstValid(callObjects))
+                    return firstValid(callObjects)
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -1314,7 +1364,8 @@ export const Ajax = signal => {
     Martha: Martha(signal),
     Duos: Duos(signal),
     Metrics: Metrics(signal),
-    Disks: Disks(signal)
+    Disks: Disks(signal),
+    CromIAM: CromIAM(signal)
   }
 }
 

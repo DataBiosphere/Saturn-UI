@@ -119,10 +119,10 @@ const SubmissionDetails = _.flow(
       div({ style: { display: 'flex' } }, [
         div({ style: { flex: '0 0 200px', marginRight: '2rem', lineHeight: '24px' } }, [
           div({ style: Style.elements.sectionHeader }, 'Workflow Statuses'),
-          succeeded && makeStatusLine(successIcon, `Succeeded: ${succeeded.length}`),
-          failed && makeStatusLine(failedIcon, `Failed: ${failed.length}`),
-          running && makeStatusLine(runningIcon, `Running: ${running.length}`),
-          submitted && makeStatusLine(submittedIcon, `Submitted: ${submitted.length}`)
+          succeeded && makeStatusLine(successIcon, `Succeeded: ${succeeded.length}`, { marginTop: '0.5rem' }),
+          failed && makeStatusLine(failedIcon, `Failed: ${failed.length}`, { marginTop: '0.5rem' }),
+          running && makeStatusLine(runningIcon, `Running: ${running.length}`, { marginTop: '0.5rem' }),
+          submitted && makeStatusLine(submittedIcon, `Submitted: ${submitted.length}`, { marginTop: '0.5rem' })
         ]),
         div({ style: { display: 'flex', flexWrap: 'wrap' } }, [
           makeSection('Workflow Configuration', [
