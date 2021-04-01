@@ -373,7 +373,7 @@ const WorkspaceData = _.flow(
   const loadSnapshotMetadata = async () => {
     try {
       setSnapshotMetadataError(false)
-      const { resources: snapshotMetadata } = await Ajax(signal).Workspaces.workspace(namespace, name).listSnapshot(1000, 0)
+      const { resources: snapshotMetadata } = await Ajax(signal).Workspaces.workspace(namespace, name).listSnapshots(1000, 0)
 
       const snapshots = _.reduce((acc, { name, ...resource }) => {
         return _.set([name, 'resource'], resource, acc)

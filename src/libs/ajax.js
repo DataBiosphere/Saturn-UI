@@ -657,7 +657,7 @@ const Workspaces = signal => ({
         return res.json()
       },
 
-      listSnapshot: async (limit, offset) => {
+      listSnapshots: async (limit, offset) => {
         if (getConfig().hideSnapshots) {
           return { resources: [] }
         }
