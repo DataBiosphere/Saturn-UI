@@ -8,6 +8,7 @@ import { ImageDepViewer } from 'src/components/ImageDepViewer'
 import { NumberInput, TextInput, ValidatedInput } from 'src/components/input'
 import { withModalDrawer } from 'src/components/ModalDrawer'
 import { InfoBox } from 'src/components/PopupTrigger'
+import { regionInfo } from 'src/components/region-common'
 import { SaveFilesHelp } from 'src/components/runtime-common'
 import TitleBar from 'src/components/TitleBar'
 import { cloudServices, machineTypes } from 'src/data/machines'
@@ -18,7 +19,7 @@ import Events, { extractWorkspaceDetails } from 'src/libs/events'
 import {
   currentRuntime, DEFAULT_DISK_SIZE, defaultDataprocMachineType, defaultGceMachineType, findMachineType, getDefaultMachineType,
   persistentDiskCostMonthly,
-  runtimeConfigBaseCost, runtimeConfigCost
+  runtimeConfigBaseCost, runtimeConfigCost, DEFAULT_LOCATION, DEFAULT_LOCATION_TYPE
 } from 'src/libs/runtime-utils'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
@@ -187,12 +188,15 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
     return {
       cloudService: desiredRuntime.cloudService,
       ...(desiredRuntime.cloudService === cloudServices.GCE ? {
+        bootDiskSize: 50,
+        zone: desiredRuntime.zone,
         machineType: desiredRuntime.machineType || defaultGceMachineType,
         bootDiskSize: desiredRuntime.bootDiskSize,
         ...(desiredRuntime.diskSize ? {
           diskSize: desiredRuntime.diskSize
         } : {})
       } : {
+        region: desiredRuntime.region,
         masterMachineType: desiredRuntime.masterMachineType || defaultDataprocMachineType,
         masterDiskSize: desiredRuntime.masterDiskSize,
         numberOfWorkers: desiredRuntime.numberOfWorkers,
@@ -252,7 +256,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
     withErrorReporting('Error creating cloud environment')
   )(async () => {
     const { onSuccess } = this.props
-    const { currentRuntimeDetails, currentPersistentDiskDetails } = this.state
+    const { currentRuntimeDetails, currentPersistentDiskDetails, bucketLocation, bucketLocationType } = this.state
     const { runtime: existingRuntime, persistentDisk: existingPersistentDisk } = this.getExistingEnvironmentConfig()
     const { runtime: desiredRuntime, persistentDisk: desiredPersistentDisk } = this.getDesiredEnvironmentConfig()
     const shouldUpdatePersistentDisk = this.canUpdatePersistentDisk() && !_.isEqual(desiredPersistentDisk, existingPersistentDisk)
@@ -261,10 +265,12 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
     const shouldDeleteRuntime = existingRuntime && !this.canUpdateRuntime()
     const shouldCreateRuntime = !this.canUpdateRuntime() && desiredRuntime
     const { name, bucketName, googleProject } = this.getWorkspaceObj()
+    const { computeZone, computeRegion } = regionInfo(bucketLocation, bucketLocationType)
 
     const runtimeConfig = desiredRuntime && {
       cloudService: desiredRuntime.cloudService,
       ...(desiredRuntime.cloudService === cloudServices.GCE ? {
+        zone: computeZone,
         machineType: desiredRuntime.machineType || defaultGceMachineType,
         ...(desiredRuntime.diskSize ? {
           diskSize: desiredRuntime.diskSize
@@ -278,6 +284,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
           }
         })
       } : {
+        region: computeRegion,
         masterMachineType: desiredRuntime.masterMachineType || defaultDataprocMachineType,
         masterDiskSize: desiredRuntime.masterDiskSize,
         numberOfWorkers: desiredRuntime.numberOfWorkers,
@@ -326,11 +333,12 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
     const {
       deleteDiskSelected, selectedPersistentDiskSize, viewMode, masterMachineType,
       masterDiskSize, sparkMode, numberOfWorkers, numberOfPreemptibleWorkers, workerMachineType,
-      workerDiskSize, jupyterUserScriptUri, selectedLeoImage, customEnvImage
+      workerDiskSize, jupyterUserScriptUri, selectedLeoImage, customEnvImage, bucketLocation, bucketLocationType
     } = this.state
     const { persistentDisk: existingPersistentDisk, runtime: existingRuntime } = this.getExistingEnvironmentConfig()
     const cloudService = sparkMode ? cloudServices.DATAPROC : cloudServices.GCE
     const desiredNumberOfWorkers = sparkMode === 'cluster' ? numberOfWorkers : 0
+    const { computeZone, computeRegion } = regionInfo(bucketLocation, bucketLocationType)
     return {
       runtime: Utils.cond(
         [(viewMode !== 'deleteEnvironmentOptions'), () => {
@@ -339,6 +347,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
             toolDockerImage: selectedLeoImage === CUSTOM_MODE ? customEnvImage : selectedLeoImage,
             ...(jupyterUserScriptUri && { jupyterUserScriptUri }),
             ...(cloudService === cloudServices.GCE ? {
+              zone: computeZone,
               machineType: masterMachineType || defaultGceMachineType,
               bootDiskSize: existingRuntime?.bootDiskSize,
               ...(this.shouldUsePersistentDisk() ? {
@@ -347,6 +356,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
                 diskSize: masterDiskSize
               })
             } : {
+              region: computeRegion,
               machineType: masterMachineType || defaultDataprocMachineType,
               masterDiskSize,
               numberOfWorkers: desiredNumberOfWorkers,
@@ -370,16 +380,18 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
   }
 
   getExistingEnvironmentConfig() {
-    const { currentRuntimeDetails, currentPersistentDiskDetails } = this.state
+    const { currentRuntimeDetails, currentPersistentDiskDetails, bucketLocation, bucketLocationType } = this.state
     const runtimeConfig = currentRuntimeDetails?.runtimeConfig
     const cloudService = runtimeConfig?.cloudService
     const numberOfWorkers = runtimeConfig?.numberOfWorkers || 0
+    const { computeZone, computeRegion } = regionInfo(bucketLocation, bucketLocationType)
     return {
       runtime: currentRuntimeDetails ? {
         cloudService,
         toolDockerImage: this.getImageUrl(currentRuntimeDetails),
         ...(currentRuntimeDetails?.jupyterUserScriptUri && { jupyterUserScriptUri: currentRuntimeDetails?.jupyterUserScriptUri }),
         ...(cloudService === cloudServices.GCE ? {
+          zone: computeZone,
           machineType: runtimeConfig.machineType || defaultGceMachineType,
           bootDiskSize: runtimeConfig.bootDiskSize,
           ...(runtimeConfig.persistentDiskId ? {
@@ -388,6 +400,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
             diskSize: runtimeConfig.diskSize
           })
         } : {
+          region: computeRegion,
           masterMachineType: runtimeConfig.masterMachineType || defaultDataprocMachineType,
           masterDiskSize: runtimeConfig.masterDiskSize || 100,
           numberOfWorkers,
@@ -479,7 +492,7 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
     withErrorReporting('Error loading cloud environment'),
     Utils.withBusyState(v => this.setState({ loading: v }))
   )(async () => {
-    const { googleProject } = this.getWorkspaceObj()
+    const { bucketName, namespace, googleProject, workspaceName } = this.getWorkspaceObj()
     const currentRuntime = this.getCurrentRuntime()
     const currentPersistentDisk = this.getCurrentPersistentDisk()
 
@@ -492,6 +505,8 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
       currentPersistentDisk ? Ajax().Disks.disk(currentPersistentDisk.googleProject, currentPersistentDisk.name).details() : null
     ])
 
+    const { location, locationType } = await Ajax().Workspaces.workspace(namespace, workspaceName).checkBucketLocation(bucketName)
+
     const imageUrl = currentRuntimeDetails ? this.getImageUrl(currentRuntimeDetails) : _.find({ id: 'terra-jupyter-gatk' }, newLeoImages).image
     const foundImage = _.find({ image: imageUrl }, newLeoImages)
     this.setState({
@@ -499,6 +514,8 @@ export const NewRuntimeModal = withModalDrawer({ width: 675 })(class NewRuntimeM
       selectedLeoImage: foundImage ? imageUrl : CUSTOM_MODE,
       customEnvImage: !foundImage ? imageUrl : '',
       jupyterUserScriptUri: currentRuntimeDetails?.jupyterUserScriptUri || '',
+      bucketLocation: location || DEFAULT_LOCATION,
+      bucketLocationType: locationType || DEFAULT_LOCATION_TYPE,
       ...this.getInitialState(currentRuntimeDetails, currentPersistentDiskDetails)
     })
   })

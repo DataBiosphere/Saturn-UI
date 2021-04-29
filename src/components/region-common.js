@@ -1,74 +1,48 @@
+import * as Utils from 'src/libs/utils'
+
 // Get a { flag: ..., countryName: ... } object representing a google locationType/location input.
 // 'flag' will always be defined (even if it's a question mark.
 // 'regionDescription' is the same as location when locationType is 'multi-region', or a country name when locationType is 'region'.
+// computeZone is generally the 'a' zone for each region, except for those regions where it is not available.
+// The choice to use the 'a' zone is arbitrary, choosing 'b' zone would also work.
+// The region choice for multi-region locations is arbitrary as well.
 export const unknownRegionFlag = '❓'
 export const regionInfo = (location, locationType) => {
-  switch (locationType) {
-    case 'multi-region':
-      switch (location) {
-        case 'US':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location}` }
-        case 'EU':
-          return { flag: '🇪🇺', regionDescription: `${locationType}: ${location}` }
-        case 'ASIA':
-          return { flag: '🌏', regionDescription: `${locationType}: ${location}` }
-        default:
-          return { flag: unknownRegionFlag, regionDescription: `${locationType}: ${location}` }
-      }
-    case 'region':
-      switch (location) {
-        case 'ASIA-EAST1':
-          return { flag: '🇹🇼', regionDescription: `${locationType}: ${location} (Taiwan)` }
-        case 'ASIA-EAST2':
-          return { flag: '🇭🇰', regionDescription: `${locationType}: ${location} (Hong Kong)` }
-        case 'ASIA-NORTHEAST1':
-          return { flag: '🇯🇵', regionDescription: `${locationType}: ${location} (Tokyo)` }
-        case 'ASIA-NORTHEAST2':
-          return { flag: '🇯🇵', regionDescription: `${locationType}: ${location} (Osaka)` }
-        case 'ASIA-NORTHEAST3':
-          return { flag: '🇰🇷', regionDescription: `${locationType}: ${location} (Seoul)` }
-        case 'ASIA-SOUTH1':
-          return { flag: '🇮🇳', regionDescription: `${locationType}: ${location} (Mumbai)` }
-        case 'ASIA-SOUTHEAST1':
-          return { flag: '🇸🇬', regionDescription: `${locationType}: ${location} (Singapore)` }
-        case 'ASIA-SOUTHEAST2':
-          return { flag: '🇮🇩', regionDescription: `${locationType}: ${location} (Jakarta)` }
-        case 'AUSTRALIA-SOUTHEAST1':
-          return { flag: '🇦🇺', regionDescription: `${locationType}: ${location} (Sydney)` }
-        case 'EUROPE-NORTH1':
-          return { flag: '🇫🇮', regionDescription: `${locationType}: ${location} (Finland)` }
-        case 'EUROPE-WEST1':
-          return { flag: '🇧🇪', regionDescription: `${locationType}: ${location} (Belgium)` }
-        case 'EUROPE-WEST2':
-          return { flag: '🇬🇧', regionDescription: `${locationType}: ${location} (London)` }
-        case 'EUROPE-WEST3':
-          return { flag: '🇩🇪', regionDescription: `${locationType}: ${location} (Frankfurt)` }
-        case 'EUROPE-WEST4':
-          return { flag: '🇳🇱', regionDescription: `${locationType}: ${location} (Netherlands)` }
-        case 'EUROPE-WEST6':
-          return { flag: '🇨🇭', regionDescription: `${locationType}: ${location} (Zurich)` }
-        case 'NORTHAMERICA-NORTHEAST1':
-          return { flag: '🇨🇦', regionDescription: `${locationType}: ${location} (Montreal)` }
-        case 'SOUTHAMERICA-EAST1':
-          return { flag: '🇧🇷', regionDescription: `${locationType}: ${location} (Sao Paulo)` }
-        case 'US-CENTRAL1':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (Iowa)` }
-        case 'US-EAST1':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (South Carolina)` }
-        case 'US-EAST4':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (Northern Virginia)` }
-        case 'US-WEST1':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (Oregon)` }
-        case 'US-WEST2':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (Los Angeles)` }
-        case 'US-WEST3':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (Salt Lake City)` }
-        case 'US-WEST4':
-          return { flag: '🇺🇸', regionDescription: `${locationType}: ${location} (Las Vegas)` }
-        default:
-          return { flag: unknownRegionFlag, regionDescription: `${locationType}: ${location}` }
-      }
-    default:
-      return { flag: unknownRegionFlag, regionDescription: `${locationType}: ${location}` }
-  }
+  const regionDescription = `${locationType}: ${location}`
+  return Utils.switchCase(locationType,
+    ['multi-region', () => Utils.switchCase(location,
+      ['US', () => ({ flag: '🇺🇸', regionDescription: regionDescription, computeZone: 'us-central1-a', computeRegion: 'us-central1' })],
+      ['EU', () => ({ flag: '🇪🇺', regionDescription: regionDescription, computeZone: 'europe-central2-a', computeRegion: 'europe-central2' })],
+      ['ASIA', () => ({ flag: '🌏', regionDescription: regionDescription, computeZone: 'asia-east1-a', computeRegion: 'asia-east1' })],
+      [Utils.DEFAULT, () => ({ flag: unknownRegionFlag, regionDescription: regionDescription, computeZone: 'UNKNOWN', computeRegion: 'UNKNOWN' })]
+    )],
+    ['region', () => Utils.switchCase(location,
+      ['ASIA-EAST1', () => ({ flag: '🇹🇼', regionDescription: `${regionDescription} (Taiwan)`, computeZone: 'asia-east1-a', computeRegion: 'asia-east1' })],
+      ['ASIA-EAST2', () => ({ flag: '🇭🇰', regionDescription: `${regionDescription} (Hong Kong)`, computeZone: 'asia-east2-a', computeRegion: 'asia-east2' })],
+      ['ASIA-NORTHEAST1', () => ({ flag: '🇯🇵', regionDescription: `${regionDescription} (Tokyo)`, computeZone: 'asia-northeast1-a', computeRegion: 'asia-northeast1' })],
+      ['ASIA-NORTHEAST2', () => ({ flag: '🇯🇵', regionDescription: `${regionDescription} (Osaka)`, computeZone: 'asia-northeast2-a', computeRegion: 'asia-northeast2' })],
+      ['ASIA-NORTHEAST3', () => ({ flag: '🇰🇷', regionDescription: `${regionDescription} (Seoul)`, computeZone: 'asia-northeast3-a', computeRegion: 'asia-northeast3' })],
+      ['ASIA-SOUTH1', () => ({ flag: '🇮🇳', regionDescription: `${regionDescription} (Mumbai)`, computeZone: 'asia-south1-a', computeRegion: 'asia-south1' })],
+      ['ASIA-SOUTHEAST1', () => ({ flag: '🇸🇬', regionDescription: `${regionDescription} (Singapore)`, computeZone: 'asia-southeast1-a', computeRegion: 'asia-southeast1' })],
+      ['ASIA-SOUTHEAST2', () => ({ flag: '🇮🇩', regionDescription: `${regionDescription} (Jakarta)`, computeZone: 'asia-southeast2-a', computeRegion: 'asia-southeast2' })],
+      ['AUSTRALIA-SOUTHEAST1', () => ({ flag: '🇦🇺', regionDescription: `${regionDescription} (Sydney)`, computeZone: 'australia-southeast1-a', computeRegion: 'australia-southeast1' })],
+      ['EUROPE-NORTH1', () => ({ flag: '🇫🇮', regionDescription: `${regionDescription} (Finland)`, computeZone: 'europe-north1-a', computeRegion: 'europe-north1' })],
+      ['EUROPE-WEST1', () => ({ flag: '🇧🇪', regionDescription: `${regionDescription} (Belgium)`, computeZone: 'europe-west1-b', computeRegion: 'europe-west1' })],
+      ['EUROPE-WEST2', () => ({ flag: '🇬🇧', regionDescription: `${regionDescription} (London)`, computeZone: 'europe-west2-a', computeRegion: 'europe-west2' })],
+      ['EUROPE-WEST3', () => ({ flag: '🇩🇪', regionDescription: `${regionDescription} (Frankfurt)`, computeZone: 'europe-west3-a', computeRegion: 'europe-west3' })],
+      ['EUROPE-WEST4', () => ({ flag: '🇳🇱', regionDescription: `${regionDescription} (Netherlands)`, computeZone: 'europe-west4-a', computeRegion: 'europe-west4' })],
+      ['EUROPE-WEST6', () => ({ flag: '🇨🇭', regionDescription: `${regionDescription} (Zurich)`, computeZone: 'europe-west6-a', computeRegion: 'europe-west6' })],
+      ['NORTHAMERICA-NORTHEAST1', () => ({ flag: '🇨🇦', regionDescription: `${regionDescription} (Montreal)`, computeZone: 'northamerica-northeast1-a', computeRegion: 'northamerica-northeast1' })],
+      ['SOUTHAMERICA-EAST1', () => ({ flag: '🇧🇷', regionDescription: `${regionDescription} (Sao Paulo)`, computeZone: 'southamerica-east1-a', computeRegion: 'southamerica-east1' })],
+      ['US-CENTRAL1', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (Iowa)`, computeZone: 'us-central1-a', computeRegion: 'us-central1' })],
+      ['US-EAST1', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (South Carolina)`, computeZone: 'us-east1-b', computeRegion: 'us-east1' })],
+      ['US-EAST4', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (Northern Virginia)`, computeZone: 'us-east4-a', computeRegion: 'us-east4' })],
+      ['US-WEST1', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (Oregon)`, computeZone: 'us-west1-a', computeRegion: 'us-west1' })],
+      ['US-WEST2', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (Los Angeles)`, computeZone: 'us-west2-a', computeRegion: 'us-west2' })],
+      ['US-WEST3', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (Salt Lake City)`, computeZone: 'us-west3-a', computeRegion: 'us-west3' })],
+      ['US-WEST4', () => ({ flag: '🇺🇸', regionDescription: `${regionDescription} (Las Vegas)`, computeZone: 'us-west4-a', computeRegion: 'us-west4' })],
+      [Utils.DEFAULT, () => ({ flag: unknownRegionFlag, regionDescription: regionDescription, computeZone: 'UNKNOWN', computeRegion: 'UNKNOWN' })]
+    )],
+    [Utils.DEFAULT, () => ({ flag: unknownRegionFlag, regionDescription: regionDescription, computeZone: 'UNKNOWN', computeRegion: 'UNKNOWN' })]
+  )
 }

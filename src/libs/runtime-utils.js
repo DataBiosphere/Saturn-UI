@@ -6,6 +6,9 @@ import * as Utils from 'src/libs/utils'
 export const DEFAULT_DISK_SIZE = 50
 export const DEFAULT_BOOT_DISK_SIZE = 50
 
+export const DEFAULT_LOCATION = 'US'
+export const DEFAULT_LOCATION_TYPE = 'multi-region'
+
 export const usableStatuses = ['Updating', 'Running']
 
 export const defaultDataprocMachineType = 'n1-standard-2'
