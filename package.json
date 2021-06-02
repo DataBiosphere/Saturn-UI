@@ -38,6 +38,7 @@
     "react-dropzone": "^11.3.2",
     "react-favicon": "^0.0.22",
     "react-focus-lock": "^2.5.0",
+    "react-google-charts": "^3.0.15",
     "react-hyperscript-helpers": "^1.2.0",
     "react-json-view": "^1.21.3",
     "react-modal": "^3.13.1",

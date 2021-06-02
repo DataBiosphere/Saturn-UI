@@ -18,6 +18,7 @@ import { getConfig } from 'src/libs/config'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
 import CallTable from 'src/pages/workspaces/workspace/jobHistory/CallTable'
+import { WorkflowTimingDiagram } from 'src/pages/workspaces/workspace/jobHistory/WorkflowTimingDiagram'
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
 
 
@@ -170,6 +171,13 @@ const WorkflowDashboard = _.flow(
               }, [icon('fileAlt', { size: 18 }), ' View execution log'])
             ])
           ])
+        ]),
+        h(Collapse, {
+          style: { marginBottom: '1rem' },
+          initialOpenState: true,
+          title: div({ style: Style.elements.sectionHeader }, ['Timing Diagram'])
+        }, [
+          h(WorkflowTimingDiagram, { callNames, callData: calls })
         ]),
         failures && h(Collapse,
           {
