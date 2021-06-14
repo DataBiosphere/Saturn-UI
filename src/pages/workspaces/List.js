@@ -1,7 +1,6 @@
 import { isAfter, parseJSON } from 'date-fns/fp'
 import _ from 'lodash/fp'
-import * as qs from 'qs'
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { div, h, span } from 'react-hyperscript-helpers'
 import { AutoSizer } from 'react-virtualized'
 import { HeaderRenderer, Link, makeMenuIcon, MenuButton, Select, topSpinnerOverlay, transparentSpinnerOverlay } from 'src/components/common'
@@ -85,13 +84,14 @@ export const WorkspaceList = () => {
   const { workspaces, refresh: refreshWorkspaces, loading: loadingWorkspaces } = useWorkspaces()
   const [featuredList, setFeaturedList] = useState()
 
-  const { query } = Nav.useRoute()
-  const [filter, setFilter] = useState(query.filter || '')
-  const [accessLevelsFilter, setAccessLevelsFilter] = useState(query.accessLevelsFilter || [])
-  const [projectsFilter, setProjectsFilter] = useState(query.projectsFilter || undefined)
-  const [submissionsFilter, setSubmissionsFilter] = useState(query.submissionsFilter || [])
-  const [tab, setTab] = useState(query.tab || 'myWorkspaces')
-  const [tagsFilter, setTagsFilter] = useState(query.tagsFilter || [])
+  const transformStateArray = Utils.transformState(v => v || [], v => v)
+  const transformStateEmptyDefault = (d, s) => Utils.transformState(v => v || d, v => v === d ? undefined : v, s)
+  const [filter, setFilter] = transformStateEmptyDefault('', Nav.useQueryState('filter'))
+  const [accessLevelsFilter, setAccessLevelsFilter] = transformStateArray(Nav.useQueryState('accessLevelsFilter'))
+  const [projectsFilter, setProjectsFilter] = Nav.useQueryState('projectsFilter')
+  const [submissionsFilter, setSubmissionsFilter] = transformStateArray(Nav.useQueryState('submissionsFilter'))
+  const [tab, setTab] = transformStateEmptyDefault('myWorkspaces', Nav.useQueryState('tab'))
+  const [tagsFilter, setTagsFilter] = transformStateArray(Nav.useQueryState('tagsFilter'))
 
   const [creatingNewWorkspace, setCreatingNewWorkspace] = useState(false)
   const [cloningWorkspaceId, setCloningWorkspaceId] = useState()
@@ -107,18 +107,6 @@ export const WorkspaceList = () => {
     }
 
     loadFeatured()
-  })
-
-  useEffect(() => {
-    // Note: setting undefined so that falsy values don't show up at all
-    const newSearch = qs.stringify({
-      ...query, filter: filter || undefined, accessLevelsFilter, projectsFilter, tagsFilter, submissionsFilter,
-      tab: tab === 'myWorkspaces' ? undefined : tab
-    }, { addQueryPrefix: true })
-
-    if (newSearch !== Nav.history.location.search) {
-      Nav.history.replace({ search: newSearch })
-    }
   })
 
   const getWorkspace = id => _.find({ workspace: { workspaceId: id } }, workspaces)

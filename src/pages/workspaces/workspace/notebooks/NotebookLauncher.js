@@ -1,6 +1,5 @@
 import * as clipboard from 'clipboard-polyfill/text'
 import _ from 'lodash/fp'
-import * as qs from 'qs'
 import { Fragment, useRef, useState } from 'react'
 import { b, div, h, iframe, p, span } from 'react-hyperscript-helpers'
 import * as breadcrumbs from 'src/components/breadcrumbs'
@@ -27,10 +26,6 @@ import ExportNotebookModal from 'src/pages/workspaces/workspace/notebooks/Export
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
 
 
-const chooseMode = mode => {
-  Nav.history.replace({ search: qs.stringify({ mode }) })
-}
-
 const NotebookLauncher = _.flow(
   Utils.forwardRefWithName('NotebookLauncher'),
   requesterPaysWrapper({
@@ -42,32 +37,32 @@ const NotebookLauncher = _.flow(
     showTabBar: false
   })
 )(
-  ({ queryParams, notebookName, workspace, workspace: { workspace: { namespace, name }, accessLevel, canCompute }, runtimes, persistentDisks, refreshRuntimes },
+  ({ notebookName, workspace, workspace: { workspace: { namespace, name }, accessLevel, canCompute }, runtimes, persistentDisks, refreshRuntimes },
     ref) => {
     const [createOpen, setCreateOpen] = useState(false)
     const runtime = currentRuntime(runtimes)
     const { runtimeName, labels } = runtime || {}
     const status = collapsedRuntimeStatus(runtime)
     const [busy, setBusy] = useState()
-    const { mode } = queryParams
+    const [mode, setMode] = Nav.useQueryState('mode')
 
     return h(Fragment, [
       (Utils.canWrite(accessLevel) && canCompute && !!mode && _.includes(status, usableStatuses) && labels.tool === 'Jupyter') ?
         h(labels.welderInstallFailed ? WelderDisabledNotebookEditorFrame : NotebookEditorFrame,
-          { key: runtimeName, workspace, runtime, notebookName, mode }) :
+          { key: runtimeName, workspace, runtime, notebookName, mode, setMode }) :
         h(Fragment, [
-          h(PreviewHeader, { queryParams, runtime, notebookName, workspace, readOnlyAccess: !(Utils.canWrite(accessLevel) && canCompute), onCreateRuntime: () => setCreateOpen(true) }),
+          h(PreviewHeader, { mode, setMode, runtime, notebookName, workspace, readOnlyAccess: !(Utils.canWrite(accessLevel) && canCompute), onCreateRuntime: () => setCreateOpen(true) }),
           h(NotebookPreviewFrame, { notebookName, workspace })
         ]),
       mode && h(RuntimeKicker, { runtime, refreshRuntimes, onNullRuntime: () => setCreateOpen(true) }),
-      mode && h(RuntimeStatusMonitor, { runtime, onRuntimeStoppedRunning: () => chooseMode(undefined) }),
+      mode && h(RuntimeStatusMonitor, { runtime, onRuntimeStoppedRunning: () => setMode(undefined) }),
       h(NewRuntimeModal, {
         isOpen: createOpen,
         workspace,
         runtimes,
         persistentDisks,
         onDismiss: () => {
-          chooseMode(undefined)
+          setMode(undefined)
           setCreateOpen(false)
         },
         onSuccess: _.flow(
@@ -175,7 +170,7 @@ const HeaderButton = ({ children, ...props }) => h(ButtonSecondary, {
   style: { padding: '1rem', backgroundColor: colors.dark(0.1), height: '100%', marginRight: 2 }, ...props
 }, [children])
 
-const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, notebookName, workspace, workspace: { canShare, workspace: { namespace, name, bucketName } } }) => {
+const PreviewHeader = ({ mode, setMode, runtime, readOnlyAccess, onCreateRuntime, notebookName, workspace, workspace: { canShare, workspace: { namespace, name, bucketName } } }) => {
   const signal = Utils.useCancellation()
   const { user: { email } } = Utils.useStore(authStore)
   const [fileInUseOpen, setFileInUseOpen] = useState(false)
@@ -187,7 +182,6 @@ const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, 
   const [copyingNotebook, setCopyingNotebook] = useState(false)
   const runtimeStatus = collapsedRuntimeStatus(runtime)
   const welderEnabled = runtime && !runtime.labels.welderInstallFailed
-  const { mode } = queryParams
   const notebookLink = Nav.getLink('workspace-notebook-launch', { namespace, name, notebookName })
 
   const checkIfLocked = withErrorReporting('Error checking notebook lock status', async () => {
@@ -223,11 +217,11 @@ const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, 
             onClick: () => setFileInUseOpen(true)
           }, [makeMenuIcon('lock'), 'Edit (In use)'])],
           () => h(HeaderButton, {
-            onClick: () => chooseMode('edit')
+            onClick: () => setMode('edit')
           }, [makeMenuIcon('edit'), 'Edit'])
         ),
         h(HeaderButton, {
-          onClick: () => getLocalPref('hidePlaygroundMessage') ? chooseMode('playground') : setPlaygroundModalOpen(true)
+          onClick: () => getLocalPref('hidePlaygroundMessage') ? setMode('playground') : setPlaygroundModalOpen(true)
         }, [makeMenuIcon('chalkboard'), 'Playground mode']),
         h(PopupTrigger, {
           closeOnClick: true,
@@ -281,7 +275,7 @@ const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, 
       },
       onPlayground: () => {
         setEditModeDisabledOpen(false)
-        chooseMode('playground')
+        setMode('playground')
       }
     }),
     fileInUseOpen && h(FileInUseModal, {
@@ -293,7 +287,7 @@ const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, 
       },
       onPlayground: () => {
         setFileInUseOpen(false)
-        chooseMode('playground')
+        setMode('playground')
       }
     }),
     copyingNotebook && h(NotebookDuplicator, {
@@ -311,7 +305,7 @@ const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, 
       onDismiss: () => setPlaygroundModalOpen(false),
       onPlayground: () => {
         setPlaygroundModalOpen(false)
-        chooseMode('playground')
+        setMode('playground')
       }
     })
   ])
@@ -397,7 +391,7 @@ const copyingNotebookMessage = div({ style: { paddingTop: '2rem' } }, [
   h(StatusMessage, ['Copying notebook to cloud environment, almost ready...'])
 ])
 
-const NotebookEditorFrame = ({ mode, notebookName, workspace: { workspace: { namespace, name, bucketName } }, runtime: { runtimeName, proxyUrl, status, labels } }) => {
+const NotebookEditorFrame = ({ mode, setMode, notebookName, workspace: { workspace: { namespace, name, bucketName } }, runtime: { runtimeName, proxyUrl, status, labels } }) => {
   console.assert(_.includes(status, usableStatuses), `Expected cloud environment to be one of: [${usableStatuses}]`)
   console.assert(!labels.welderInstallFailed, 'Expected cloud environment to have Welder')
   const frameRef = useRef()
@@ -421,7 +415,7 @@ const NotebookEditorFrame = ({ mode, notebookName, workspace: { workspace: { nam
       notify('error', 'Unable to Edit Notebook', {
         message: 'Another user is currently editing this notebook. You can run it in Playground Mode or make a copy.'
       })
-      chooseMode(undefined)
+      setMode(undefined)
     } else {
       await Ajax().Runtimes.notebooks(namespace, runtimeName).localize([{
         sourceUri: `${cloudStorageDirectory}/${notebookName}`,
@@ -452,7 +446,7 @@ const NotebookEditorFrame = ({ mode, notebookName, workspace: { workspace: { nam
   ])
 }
 
-const WelderDisabledNotebookEditorFrame = ({ mode, notebookName, workspace: { workspace: { namespace, name, bucketName } }, runtime: { runtimeName, proxyUrl, status, labels } }) => {
+const WelderDisabledNotebookEditorFrame = ({ mode, setMode, notebookName, workspace: { workspace: { namespace, name, bucketName } }, runtime: { runtimeName, proxyUrl, status, labels } }) => {
   console.assert(status === 'Running', 'Expected cloud environment to be running')
   console.assert(!!labels.welderInstallFailed, 'Expected cloud environment to not have Welder')
   const frameRef = useRef()
@@ -472,7 +466,7 @@ const WelderDisabledNotebookEditorFrame = ({ mode, notebookName, workspace: { wo
           h(Link, { href: dataSyncingDocUrl, ...Utils.newTabLinkProps }, ['Read here for more details.'])
         ])
       })
-      chooseMode(undefined)
+      setMode(undefined)
     } else {
       await Ajax(signal).Runtimes.notebooks(namespace, runtimeName).oldLocalize({
         [`~/${name}/${notebookName}`]: `gs://${bucketName}/notebooks/${notebookName}`

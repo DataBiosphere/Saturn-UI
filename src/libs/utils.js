@@ -479,3 +479,12 @@ export const sha256 = async message => {
     _.join('')
   )(new Uint8Array(hashBuffer))
 }
+
+/*
+ * Transforms the given [value, setValue] pair, applying the readFn on read and the writeFn on
+ * write. This can be used to transparently change how a piece of state is stored, which is useful
+ * when state might be visible externally, e.g. useQueryState
+ */
+export const transformState = _.curry((readFn, writeFn, [value, setValue]) => {
+  return [readFn(value), v => setValue(_.isFunction(v) ? _.flow(v, writeFn) : writeFn(v))]
+})

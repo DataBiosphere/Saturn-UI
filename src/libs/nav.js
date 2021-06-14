@@ -113,3 +113,15 @@ export const updateSearch = (query, params) => {
     history.replace({ search: newSearch })
   }
 }
+
+export const useQueryState = field => {
+  const { query } = useRoute()
+  const value = query[field]
+  const setValue = v => {
+    const newSearch = qs.stringify({ ...query, [field]: v }, { addQueryPrefix: true })
+    if (newSearch !== history.location.search) {
+      history.replace({ search: newSearch })
+    }
+  }
+  return [value, setValue]
+}
