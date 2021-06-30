@@ -56,7 +56,7 @@ const analysisCardCommonStyles = _.merge({ display: 'flex' },
     marginBottom: '0.5rem',
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
+    width: '100%'
   }
 )
 
@@ -65,23 +65,23 @@ const noWrite = 'You do not have access to modify this workspace.'
 const sortTokens = {
   name: notebook => notebook.name.toLowerCase()
 }
-const defaultSort = { label: 'Most Recently Updated', value: { field: 'updated', direction: 'desc' } }
+const defaultSort = { label: 'Most Recently Updated', value: { field: 'lastModified', direction: 'desc' } }
 const sortOptions = [
   defaultSort,
-  { label: 'Least Recently Updated', value: { field: 'updated', direction: 'asc' } },
+  { label: 'Least Recently Updated', value: { field: 'lastModified', direction: 'asc' } },
   { label: 'Alphabetical', value: { field: 'name', direction: 'asc' } },
   { label: 'Reverse Alphabetical', value: { field: 'name', direction: 'desc' } }
 ]
 
 const workspaceLastModifiedWidth = 150
-const workspaceExpandIconSize = 20
+const workspaceExpandIconSize = 18
 
 const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
-  return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
+  return div({ style: { display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
     div({ 'aria-sort': ariaSort(sort, 'Application'), style: { flex: 1, paddingLeft: '1rem' } }, [
       h(HeaderRenderer, { sort, onSort, name: 'application' })
     ]),
-    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: 1 } }, [
+    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: '0 0 400px', marginRight: 20 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'name' })
     ]),
     div({style: { flexGrow: 1}}),
@@ -94,7 +94,7 @@ const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, o
   ])
 })
 
-const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, wsName, onRename, onCopy, onDelete, onExport, canWrite, currentUserHash, potentialLockers }) => {
+const AnalysisCard = ({ namespace, name, lastModified, metadata, application, wsName, onRename, onCopy, onDelete, onExport, canWrite, currentUserHash, potentialLockers }) => {
   const { lockExpiresAt, lastLockedBy } = metadata || {}
   const lockExpirationDate = new Date(parseInt(lockExpiresAt))
   const locked = currentUserHash && lastLockedBy && lastLockedBy !== currentUserHash && lockExpirationDate > Date.now()
@@ -173,30 +173,32 @@ const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, wsName, o
     }
   }, getDisplayName(name))
 
-  const appIconSrc = Utils.switchCase(toolLabel, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
+  const appIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
   const appIcon = div({ style: { marginRight: '1rem' } }, [
     img({ src: appIconSrc, style: { height: 40, width: 40 } })
   ])
+
+  console.log('last modified')
+  console.log(lastModified)
 
   return a({
     href: analysisLink,
     style: {
       ...Style.elements.card.container,
       ...analysisCardCommonStyles,
-      flexShrink: 0
     }
   }, [
     appIcon,
-    toolLabel,
+    application,
     title,
     div({ style: { flexGrow: 1 } }),
     locked && h(Clickable, {
       style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
       tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
     }, [icon('lock')]),
-    h(TooltipTrigger, { content: Utils.makeCompleteDate(updated) }, [
+    h(TooltipTrigger, { content: Utils.makeCompleteDate(lastModified) }, [
       div({ style: { fontSize: '0.8rem', marginRight: '0.5rem' } },
-        `Last edited: ${Utils.makePrettyDate(updated)}`)
+        `Last edited: ${Utils.makePrettyDate(lastModified)}`)
     ]),
     analysisMenu
   ])
@@ -248,11 +250,12 @@ const Analyses = _.flow(
     Utils.withBusyState(setBusy)
   )(async () => {
     const notebooks = await Ajax(signal).Buckets.listNotebooks(namespace, bucketName)
-    const enhancedNotebooks = _.map(notebook => _.merge(notebook, { toolLabel: tools.Jupyter.label }), notebooks)
+    //we map the `toolLabel` and `updated` fields to their corresponding header label, which simplifies the table sorting
+    const enhancedNotebooks = _.map(notebook => _.merge(notebook, { application: tools.Jupyter.label, lastModified: notebook.updated }), notebooks)
     const rmds = await Ajax(signal).Buckets.listRmds(namespace, bucketName)
-    const enhancedRmd = _.map(rmd => _.merge(rmd, { toolLabel: tools.RStudio.label }), rmds)
+    const enhancedRmd = _.map(rmd => _.merge(rmd, { application: tools.RStudio.label, lastModified: rmd.updated }), rmds)
     const analyses = _.concat(enhancedNotebooks, enhancedRmd)
-    setAnalyses(_.reverse(_.sortBy('updated', analyses)))
+    setAnalyses(_.reverse(_.sortBy('lastModified', analyses)))
   })
 
   //TODO: eventually load app artefacts
@@ -317,6 +320,9 @@ const Analyses = _.flow(
     ])
   ])
 
+  console.log('analyses')
+  console.dir(analyses)
+
   // Render helpers
   const renderAnalyses = () => {
     const { field, direction } = sortOrder
@@ -324,9 +330,9 @@ const Analyses = _.flow(
     const renderedAnalyses = _.flow(
       _.filter(({ name }) => Utils.textMatch(filter, getDisplayName(name))),
       _.orderBy(sortTokens[field] || field, direction),
-      _.map(({ name, updated, metadata, toolLabel }) => h(AnalysisCard, {
+      _.map(({ name, lastModified, metadata, application }) => h(AnalysisCard, {
         key: name,
-        name, updated, metadata, toolLabel, namespace, wsName, canWrite, currentUserHash, potentialLockers,
+        name, lastModified, metadata, application, namespace, wsName, canWrite, currentUserHash, potentialLockers,
         onRename: () => setRenamingAnalysisName(name),
         onCopy: () => setCopyingAnalysisName(name),
         onExport: () => setExportingAnalysisName(name),
