@@ -155,13 +155,14 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
   }, getDisplayName(name))
 
   //the flex values here correspond to the flex values in the header
-  const appIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
-  const appIcon = div({ style: { marginRight: '1rem' } }, [
-    img({ src: appIconSrc, style: { height: 40, width: 40 } })
+  const toolIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
+  const toolIcon = div({ style: { marginRight: '1rem' } }, [
+    img({ src: toolIconSrc, style: { height: 40, width: 40 } })
   ])
 
-  const appContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center'} }, [
-    appIcon,
+  const toolContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center'} }, [
+    toolIcon,
+    // this is the tool name, i.e. 'Jupyter'. It is named identical to the header row to simplify the sorting code at the cost of naming consistency.
     application
   ])
 
@@ -171,7 +172,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
       ...Style.cardList.longCardShadowless
     }
   }, [
-    appContainer,
+    toolContainer,
     artefactName,
     div({ style: { flex: 1, display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' } }, [
       locked && h(Clickable, {
