@@ -157,7 +157,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
   //the flex values here correspond to the flex values in the header
   const toolIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
   const toolIcon = div({ style: { marginRight: '1rem' } }, [
-    img({ src: toolIconSrc, style: { height: 40, width: 40 } })
+    img({ src: toolIconSrc, style: { height: 40, width: 50 } })
   ])
 
   const toolContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center'} }, [
