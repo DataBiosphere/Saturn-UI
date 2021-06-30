@@ -2,18 +2,16 @@ import * as clipboard from 'clipboard-polyfill/text'
 import _ from 'lodash/fp'
 import * as qs from 'qs'
 import { Fragment, useEffect, useState } from 'react'
-import { a, div, h, img, label } from 'react-hyperscript-helpers'
+import { a, div, h, img } from 'react-hyperscript-helpers'
 import * as breadcrumbs from 'src/components/breadcrumbs'
 import { requesterPaysWrapper, withRequesterPaysHandler } from 'src/components/bucket-utils'
-import { ViewToggleButtons, withViewToggle } from 'src/components/CardsListToggle'
+import { withViewToggle } from 'src/components/CardsListToggle'
 import {
   ButtonOutline,
   ButtonPrimary,
   Clickable, HeaderRenderer,
-  IdContainer,
   Link,
   PageBox,
-  Select,
   spinnerOverlay
 } from 'src/components/common'
 import Dropzone from 'src/components/Dropzone'
@@ -32,6 +30,7 @@ import {
   tools
 } from 'src/components/notebook-utils'
 import { makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
+import { ariaSort } from 'src/components/table'
 import TooltipTrigger from 'src/components/TooltipTrigger'
 import galaxyLogo from 'src/images/galaxy-logo.png'
 import jupyterLogo from 'src/images/jupyter-logo.svg'
@@ -48,7 +47,6 @@ import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
 import ExportAnalysisModal from 'src/pages/workspaces/workspace/notebooks/ExportNotebookModal'
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
-import { ariaSort } from 'src/components/table'
 
 
 const noWrite = 'You do not have access to modify this workspace.'
@@ -57,29 +55,22 @@ const sortTokens = {
   name: notebook => notebook.name.toLowerCase()
 }
 const defaultSort = { label: 'Most Recently Updated', value: { field: 'lastModified', direction: 'desc' } }
-const sortOptions = [
-  defaultSort,
-  { label: 'Least Recently Updated', value: { field: 'lastModified', direction: 'asc' } },
-  { label: 'Alphabetical', value: { field: 'name', direction: 'asc' } },
-  { label: 'Reverse Alphabetical', value: { field: 'name', direction: 'desc' } }
-]
 
-const workspaceLastModifiedWidth = 133
-const workspaceExpandIconSize = 18
+const analysisContextMenuSize = 18
 
 const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
   return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
     div({ 'aria-sort': ariaSort(sort, 'Application'), style: { paddingLeft: '1rem', flex: 1 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'application' })
     ]),
-    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: 5 } }, [
+    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: '5 1 5%' } }, [
       h(HeaderRenderer, { sort, onSort, name: 'name' })
     ]),
-    div({style: { flexGrow: 2 } }),
-    div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: `0 0 ${workspaceLastModifiedWidth}px` } }, [
+    div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: 1, justifyContent: 'flex-end', display: 'flex' } }, [
       h(HeaderRenderer, { sort, onSort, name: 'lastModified' })
     ]),
-    div({ style: { flex: `0 0 ${workspaceExpandIconSize}px` } }, [
+    //this is to offset the right-aligned header content by the size of the context menu in the table rows
+    div({ style: { flex: `0 0 ${analysisContextMenuSize}px` } }, [
       div({ className: 'sr-only' }, ['Expand'])
     ])
   ])
@@ -151,7 +142,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
   }, [
     h(Link, { 'aria-label': 'Analyses menu', onClick: e => e.preventDefault() }, [
       icon('ellipsis-v', {
-        size: 18
+        size: analysisContextMenuSize
       })
     ])
   ])
@@ -163,6 +154,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
     }
   }, getDisplayName(name))
 
+  //the flex values here correspond to the flex values in the header
   const appIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
   const appIcon = div({ style: { marginRight: '1rem' } }, [
     img({ src: appIconSrc, style: { height: 40, width: 40 } })
@@ -170,11 +162,8 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
 
   const appContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center'} }, [
     appIcon,
-    div({style: {width: '60px'}}, ['test'])
+    application
   ])
-
-  console.log('last modified')
-  console.log(lastModified)
 
   return a({
     href: analysisLink,
@@ -184,17 +173,16 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
   }, [
     appContainer,
     artefactName,
-    div({ style: { flexGrow: 1 } }),
-    div({ style: { flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'flex-end'}},[
-    locked && h(Clickable, {
-      style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
-      tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
-    }, [icon('lock')]),
-    h(TooltipTrigger, { content: Utils.makeCompleteDate(lastModified) }, [
-      div({ style: { fontSize: '0.8rem', marginRight: '0.5rem' } },
-        `Last edited: ${Utils.makePrettyDate(lastModified)}`)
-    ]),
-    analysisMenu
+    div({ style: { flex: 1, display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' } }, [
+      locked && h(Clickable, {
+        style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
+        tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
+      }, [icon('lock')]),
+      h(TooltipTrigger, { content: Utils.makeCompleteDate(lastModified) }, [
+        div({ style: { fontSize: '0.8rem', marginRight: '0.5rem' } },
+          `Last edited: ${Utils.makePrettyDate(lastModified)}`)
+      ]),
+      analysisMenu
     ])
   ])
 }
@@ -245,7 +233,7 @@ const Analyses = _.flow(
     Utils.withBusyState(setBusy)
   )(async () => {
     const notebooks = await Ajax(signal).Buckets.listNotebooks(namespace, bucketName)
-    //we map the `toolLabel` and `updated` fields to their corresponding header label, which simplifies the table sorting
+    //we map the `toolLabel` and `updated` fields to their corresponding header label, which simplifies the table sorting code
     const enhancedNotebooks = _.map(notebook => _.merge(notebook, { application: tools.Jupyter.label, lastModified: notebook.updated }), notebooks)
     const rmds = await Ajax(signal).Buckets.listRmds(namespace, bucketName)
     const enhancedRmd = _.map(rmd => _.merge(rmd, { application: tools.RStudio.label, lastModified: rmd.updated }), rmds)
@@ -315,9 +303,6 @@ const Analyses = _.flow(
     ])
   ])
 
-  console.log('analyses')
-  console.dir(analyses)
-
   // Render helpers
   const renderAnalyses = () => {
     const { field, direction } = sortOrder
@@ -337,7 +322,8 @@ const Analyses = _.flow(
 
     return div({
       style: {
-        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center', backgroundColor: colors.light(), padding: '0 1rem 0 1rem'}, _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column'})
+        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center', backgroundColor: colors.light(), padding: '0 1rem 0 1rem' },
+          _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column' })
       }
     }, [
       Utils.cond(
@@ -398,18 +384,6 @@ const Analyses = _.flow(
           onChange: setFilter,
           value: filter
         }),
-        !_.isEmpty(analyses) && h(IdContainer, [id => h(Fragment, [
-          label({ htmlFor: id, style: { marginLeft: 'auto', marginRight: '0.75rem' } }, ['Sort By:']),
-          h(Select, {
-            id,
-            value: sortOrder,
-            isClearable: false,
-            styles: { container: old => ({ ...old, width: 220, marginRight: '1.10rem' }) },
-            options: sortOptions,
-            onChange: selected => setSortOrder(selected.value)
-          })
-        ])]),
-        //TODO: create impl for analyses. will not live in the same place, but keeping code and state for reference
         h(NewAnalysisModal, {
           isOpen: creating,
           namespace,
