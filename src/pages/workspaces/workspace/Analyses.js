@@ -210,8 +210,6 @@ const Analyses = _.flow(
   const [deletingAnalysisName, setDeletingAnalysisName] = useState(undefined)
   const [exportingAnalysisName, setExportingAnalysisName] = useState(undefined)
   const [sortOrder, setSortOrder] = useState(() => StateHistory.get().sortOrder || defaultSort.value)
-  console.log('sort order')
-  console.log(sortOrder)
   const [filter, setFilter] = useState(() => StateHistory.get().filter || '')
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
