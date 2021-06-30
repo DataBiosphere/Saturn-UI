@@ -60,10 +60,10 @@ const analysisContextMenuSize = 18
 
 const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
   return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
-    div({ 'aria-sort': ariaSort(sort, 'Application'), style: { paddingLeft: '1rem', flex: 1 } }, [
+    div({ 'aria-sort': ariaSort(sort, 'Application'), style: { flex: 1 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'application' })
     ]),
-    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: '5 1 5%' } }, [
+    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: 5 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'name' })
     ]),
     div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: 1, justifyContent: 'flex-end', display: 'flex' } }, [
