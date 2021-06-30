@@ -9,7 +9,7 @@ import { ViewToggleButtons, withViewToggle } from 'src/components/CardsListToggl
 import {
   ButtonOutline,
   ButtonPrimary,
-  Clickable,
+  Clickable, HeaderRenderer,
   IdContainer,
   Link,
   PageBox,
@@ -48,38 +48,53 @@ import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
 import ExportAnalysisModal from 'src/pages/workspaces/workspace/notebooks/ExportNotebookModal'
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
+import { ariaSort } from 'src/components/table'
 
 
-const analysisCardCommonStyles = listView => _.merge({ display: 'flex' },
-  listView ?
-    {
-      marginBottom: '0.5rem',
-      flexDirection: 'row',
-      alignItems: 'center'
-    } :
-    {
-      margin: '0 2.5rem 2.5rem 0',
-      height: 100,
-      width: 400,
-      flexDirection: 'column',
-      padding: 0
-    }
+const analysisCardCommonStyles = _.merge({ display: 'flex' },
+  {
+    marginBottom: '0.5rem',
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  }
 )
 
 const noWrite = 'You do not have access to modify this workspace.'
 
 const sortTokens = {
-  lowerCaseName: notebook => notebook.name.toLowerCase()
+  name: notebook => notebook.name.toLowerCase()
 }
 const defaultSort = { label: 'Most Recently Updated', value: { field: 'updated', direction: 'desc' } }
 const sortOptions = [
   defaultSort,
   { label: 'Least Recently Updated', value: { field: 'updated', direction: 'asc' } },
-  { label: 'Alphabetical', value: { field: 'lowerCaseName', direction: 'asc' } },
-  { label: 'Reverse Alphabetical', value: { field: 'lowerCaseName', direction: 'desc' } }
+  { label: 'Alphabetical', value: { field: 'name', direction: 'asc' } },
+  { label: 'Reverse Alphabetical', value: { field: 'name', direction: 'desc' } }
 ]
 
-const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, listView, wsName, onRename, onCopy, onDelete, onExport, canWrite, currentUserHash, potentialLockers }) => {
+const workspaceLastModifiedWidth = 150
+const workspaceExpandIconSize = 20
+
+const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
+  return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
+    div({ 'aria-sort': ariaSort(sort, 'Application'), style: { flex: 1, paddingLeft: '1rem' } }, [
+      h(HeaderRenderer, { sort, onSort, name: 'application' })
+    ]),
+    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: 1 } }, [
+      h(HeaderRenderer, { sort, onSort, name: 'name' })
+    ]),
+    div({style: { flexGrow: 1}}),
+    div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: `0 0 ${workspaceLastModifiedWidth}px` } }, [
+      h(HeaderRenderer, { sort, onSort, name: 'lastModified' })
+    ]),
+    div({ style: { flex: `0 0 ${workspaceExpandIconSize}px` } }, [
+      div({ className: 'sr-only' }, ['Expand'])
+    ])
+  ])
+})
+
+const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, wsName, onRename, onCopy, onDelete, onExport, canWrite, currentUserHash, potentialLockers }) => {
   const { lockExpiresAt, lastLockedBy } = metadata || {}
   const lockExpirationDate = new Date(parseInt(lockExpiresAt))
   const locked = currentUserHash && lastLockedBy && lastLockedBy !== currentUserHash && lockExpirationDate > Date.now()
@@ -145,18 +160,17 @@ const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, listView,
   }, [
     h(Link, { 'aria-label': 'Analyses menu', onClick: e => e.preventDefault() }, [
       icon('ellipsis-v', {
-        size: listView ? 18 : 16
+        size: 18
       })
     ])
   ])
 
   const title = div({
     title: getDisplayName(name),
-    style: _.merge({
-      ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto'
-    }, listView ? {
-      marginLeft: '1rem', flexGrow: 1
-    } : { height: 60, padding: '1rem' })
+    style: {
+      ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto',
+      marginLeft: '1rem', flex: 1
+    }
   }, getDisplayName(name))
 
   const appIconSrc = Utils.switchCase(toolLabel, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
@@ -168,10 +182,10 @@ const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, listView,
     href: analysisLink,
     style: {
       ...Style.elements.card.container,
-      ...analysisCardCommonStyles(listView),
+      ...analysisCardCommonStyles,
       flexShrink: 0
     }
-  }, listView ? [
+  }, [
     appIcon,
     toolLabel,
     title,
@@ -185,34 +199,6 @@ const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, listView,
         `Last edited: ${Utils.makePrettyDate(updated)}`)
     ]),
     analysisMenu
-  ] : [
-    div({ style: { display: 'flex' } }, [
-      title,
-      div({ style: { flexGrow: 1 } }),
-      locked && h(Clickable, {
-        style: { display: 'flex', padding: '1rem', color: colors.dark(0.75) },
-        tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
-      }, [icon('lock')])
-    ]),
-    div({
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderTop: `solid 1px ${colors.dark(0.4)}`,
-        paddingLeft: '0.5rem', paddingRight: '0.5rem', height: '2.5rem',
-        backgroundColor: colors.light(0.4),
-        borderRadius: '0 0 5px 5px'
-      }
-    }, [
-      h(TooltipTrigger, { content: Utils.makeCompleteDate(updated) }, [
-        div({ style: { fontSize: '0.8rem', marginRight: '0.5rem' } }, [
-          'Last edited: ',
-          Utils.makePrettyDate(updated)
-        ])
-      ]),
-      analysisMenu
-    ])
   ])
 }
 
@@ -228,7 +214,7 @@ const Analyses = _.flow(
   withViewToggle('analysesTab')
 )(({
   apps, name: wsName, namespace, workspace, workspace: { accessLevel, canShare, workspace: { bucketName } },
-  refreshApps, onRequesterPaysError, listView, setListView, runtimes,
+  refreshApps, onRequesterPaysError, runtimes,
   persistentDisks,
   refreshRuntimes,
   galaxyDataDisks
@@ -239,6 +225,8 @@ const Analyses = _.flow(
   const [deletingAnalysisName, setDeletingAnalysisName] = useState(undefined)
   const [exportingAnalysisName, setExportingAnalysisName] = useState(undefined)
   const [sortOrder, setSortOrder] = useState(() => StateHistory.get().sortOrder || defaultSort.value)
+  console.log('sort order')
+  console.log(sortOrder)
   const [filter, setFilter] = useState(() => StateHistory.get().filter || '')
   const [busy, setBusy] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -338,7 +326,7 @@ const Analyses = _.flow(
       _.orderBy(sortTokens[field] || field, direction),
       _.map(({ name, updated, metadata, toolLabel }) => h(AnalysisCard, {
         key: name,
-        name, updated, metadata, toolLabel, listView, namespace, wsName, canWrite, currentUserHash, potentialLockers,
+        name, updated, metadata, toolLabel, namespace, wsName, canWrite, currentUserHash, potentialLockers,
         onRename: () => setRenamingAnalysisName(name),
         onCopy: () => setCopyingAnalysisName(name),
         onExport: () => setExportingAnalysisName(name),
@@ -348,7 +336,7 @@ const Analyses = _.flow(
 
     return div({
       style: {
-        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center' }, _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : {})
+        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center' }, _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column'})
       }
     }, [
       Utils.cond(
@@ -356,8 +344,10 @@ const Analyses = _.flow(
         [!_.isEmpty(analyses) && _.isEmpty(renderedAnalyses), () => {
           return div({ style: { fontStyle: 'italic' } }, ['No matching analyses'])
         }],
-        [listView, () => div({ style: { flex: 1 } }, [renderedAnalyses])],
-        () => div({ style: { display: 'flex', flexWrap: 'wrap' } }, renderedAnalyses)
+        [Utils.DEFAULT, () => h(Fragment, [
+          h(AnalysisCardHeaders, {sort: sortOrder, onSort: setSortOrder }),
+          div({ role: 'list', 'aria-label': 'analysis artefacts in workspace', style: { flexGrow: 1, width: '100%' } }, [renderedAnalyses])
+        ])]
       )
     ])
   }
@@ -418,7 +408,6 @@ const Analyses = _.flow(
             onChange: selected => setSortOrder(selected.value)
           })
         ])]),
-        !_.isEmpty(analyses) && h(ViewToggleButtons, { listView, setListView }),
         //TODO: create impl for analyses. will not live in the same place, but keeping code and state for reference
         h(NewAnalysisModal, {
           isOpen: creating,
