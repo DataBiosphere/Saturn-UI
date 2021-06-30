@@ -51,15 +51,6 @@ import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer
 import { ariaSort } from 'src/components/table'
 
 
-const analysisCardCommonStyles = _.merge({ display: 'flex' },
-  {
-    marginBottom: '0.5rem',
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%'
-  }
-)
-
 const noWrite = 'You do not have access to modify this workspace.'
 
 const sortTokens = {
@@ -73,18 +64,18 @@ const sortOptions = [
   { label: 'Reverse Alphabetical', value: { field: 'name', direction: 'desc' } }
 ]
 
-const workspaceLastModifiedWidth = 150
+const workspaceLastModifiedWidth = 133
 const workspaceExpandIconSize = 18
 
 const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
-  return div({ style: { display: 'flex', flexDirection: 'row', alignItems: 'center', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
-    div({ 'aria-sort': ariaSort(sort, 'Application'), style: { flex: 1, paddingLeft: '1rem' } }, [
+  return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
+    div({ 'aria-sort': ariaSort(sort, 'Application'), style: { paddingLeft: '1rem', flex: 1 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'application' })
     ]),
-    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: '0 0 400px', marginRight: 20 } }, [
+    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: 5 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'name' })
     ]),
-    div({style: { flexGrow: 1}}),
+    div({style: { flexGrow: 2 } }),
     div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: `0 0 ${workspaceLastModifiedWidth}px` } }, [
       h(HeaderRenderer, { sort, onSort, name: 'lastModified' })
     ]),
@@ -165,11 +156,10 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
     ])
   ])
 
-  const title = div({
+  const artefactName = div({
     title: getDisplayName(name),
     style: {
-      ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto',
-      marginLeft: '1rem', flex: 1
+      ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto', flex: 5, textAlign: 'left'
     }
   }, getDisplayName(name))
 
@@ -178,20 +168,24 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
     img({ src: appIconSrc, style: { height: 40, width: 40 } })
   ])
 
+  const appContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center'} }, [
+    appIcon,
+    div({style: {width: '60px'}}, ['test'])
+  ])
+
   console.log('last modified')
   console.log(lastModified)
 
   return a({
     href: analysisLink,
     style: {
-      ...Style.elements.card.container,
-      ...analysisCardCommonStyles,
+      ...Style.cardList.longCardShadowless
     }
   }, [
-    appIcon,
-    application,
-    title,
+    appContainer,
+    artefactName,
     div({ style: { flexGrow: 1 } }),
+    div({ style: { flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'flex-end'}},[
     locked && h(Clickable, {
       style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
       tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
@@ -201,6 +195,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
         `Last edited: ${Utils.makePrettyDate(lastModified)}`)
     ]),
     analysisMenu
+    ])
   ])
 }
 
@@ -342,7 +337,7 @@ const Analyses = _.flow(
 
     return div({
       style: {
-        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center' }, _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column'})
+        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center', backgroundColor: colors.light(), padding: '0 1rem 0 1rem'}, _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column'})
       }
     }, [
       Utils.cond(
