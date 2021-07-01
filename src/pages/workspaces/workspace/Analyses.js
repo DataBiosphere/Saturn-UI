@@ -319,7 +319,7 @@ const Analyses = _.flow(
 
     return div({
       style: {
-        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center', backgroundColor: colors.light(), padding: '0 1rem 0 1rem' },
+        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center', padding: '0 1rem 0 1rem' },
           _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column' })
       }
     }, [
@@ -340,7 +340,7 @@ const Analyses = _.flow(
   return h(Dropzone, {
     accept: `.${tools.Jupyter.ext}, .${tools.RStudio.ext}`,
     disabled: !Utils.canWrite(accessLevel),
-    style: { flexGrow: 1 },
+    style: { flexGrow: 1, backgroundColor: colors.light() },
     activeStyle: { backgroundColor: colors.accent(0.2), cursor: 'copy' },
     onDropRejected: () => reportError('Not a valid analysis file',
       'The selected file is not a .ipynb notebook file or an .Rmd rstudio file. Ensure your file has the proper extension.'),
