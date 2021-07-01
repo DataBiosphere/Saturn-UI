@@ -69,10 +69,6 @@ const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, o
     div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: '0 0 10%', justifyContent: 'flex-left', display: 'flex' } }, [
       h(HeaderRenderer, { sort, onSort, name: 'lastModified' })
     ])
-    //this is to offset the right-aligned header content by the size of the context menu in the table rows
-    // div({ style: { flex: `0 0 ${analysisContextMenuSize}px` } }, [
-    //   div({ className: 'sr-only' }, ['Expand'])
-    // ])
   ])
 })
 
@@ -147,20 +143,20 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
     ])
   ])
 
+  //the flex values for columns here correspond to the flex values in the header
   const artefactName = div({
     title: getDisplayName(name),
     style: {
       ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto', flex: 5, textAlign: 'left'
     }
-  }, getDisplayName(name))
+  }, [getDisplayName(name)])
 
-  //the flex values here correspond to the flex values in the header
   const toolIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
   const toolIcon = div({ style: { marginRight: '1rem' } }, [
     img({ src: toolIconSrc, style: { height: 40, width: 50 } })
   ])
 
-  const toolContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center'} }, [
+  const toolContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center' } }, [
     toolIcon,
     // this is the tool name, i.e. 'Jupyter'. It is named identical to the header row to simplify the sorting code at the cost of naming consistency.
     application
@@ -176,7 +172,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
     artefactName,
     //The 10% allows for the longest date possible (September XX, XXXX), plus a locked symbol, without text wrapping when the screen is maximized
     div({ style: { flex: '0 0 10%', display: 'flex', flexDirection: 'row', justifyContent: 'flex-left' } }, [
-      div({ style: { flex: 1, display: 'flex'} }, [
+      div({ style: { flex: 1, display: 'flex' } }, [
         locked && h(Clickable, {
           style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
           tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
@@ -333,7 +329,7 @@ const Analyses = _.flow(
           return div({ style: { fontStyle: 'italic' } }, ['No matching analyses'])
         }],
         [Utils.DEFAULT, () => h(Fragment, [
-          h(AnalysisCardHeaders, {sort: sortOrder, onSort: setSortOrder }),
+          h(AnalysisCardHeaders, { sort: sortOrder, onSort: setSortOrder }),
           div({ role: 'list', 'aria-label': 'analysis artefacts in workspace', style: { flexGrow: 1, width: '100%' } }, [renderedAnalyses])
         ])]
       )
