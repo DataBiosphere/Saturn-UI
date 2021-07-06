@@ -69,6 +69,8 @@ const AnalysisLauncher = _.flow(
       mode && h(RuntimeStatusMonitor, { runtime, onRuntimeStoppedRunning: () => chooseMode(undefined) }),
       h(NewRuntimeModal, {
         isOpen: createOpen,
+        tool: toolLabel,
+        isAnalysisMode: true,
         workspace,
         runtimes,
         persistentDisks,

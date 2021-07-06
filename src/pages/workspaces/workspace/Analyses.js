@@ -59,7 +59,7 @@ const defaultSort = { label: 'Most Recently Updated', value: { field: 'lastModif
 const analysisContextMenuSize = 18
 
 const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
-  return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem', marginBottom: '0.5rem' } }, [
+  return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem 0 1.5rem', marginBottom: '0.5rem' } }, [
     div({ 'aria-sort': ariaSort(sort, 'Application'), style: { flex: 1 } }, [
       h(HeaderRenderer, { sort, onSort, name: 'application' })
     ]),
@@ -151,7 +151,9 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
     }
   }, [getDisplayName(name)])
 
-  const toolIconSrc = Utils.switchCase(application, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
+  const toolIconSrc = Utils.switchCase(application,
+    [tools.Jupyter.label, () => jupyterLogo],
+    [tools.RStudio.label, () => rLogo])
   const toolIcon = div({ style: { marginRight: '1rem' } }, [
     img({ src: toolIconSrc, style: { height: 40, width: 50 } })
   ])
@@ -164,9 +166,9 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
 
   return a({
     href: analysisLink,
-    style: {
+    style: _.merge({
       ...Style.cardList.longCardShadowless
-    }
+    }, { marginBottom: '.75rem', paddingLeft: '1.5rem' })
   }, [
     toolContainer,
     artefactName,
@@ -178,7 +180,7 @@ const AnalysisCard = ({ namespace, name, lastModified, metadata, application, ws
           tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
         }, [icon('lock')]),
         h(TooltipTrigger, { content: Utils.makeCompleteDate(lastModified) }, [
-          div({ style: { fontSize: '0.8rem' } }, [Utils.makePrettyDate(lastModified)])
+          div({ style: { fontSize: '0.8rem', display: 'flex', alignItems: 'center' } }, [Utils.makePrettyDate(lastModified)])
         ])
       ]),
       analysisMenu
