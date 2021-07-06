@@ -3,7 +3,7 @@ import { div, h } from 'react-hyperscript-helpers'
 import { Clickable, comingSoon } from 'src/components/common'
 import { icon } from 'src/components/icons'
 import { makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
-import colors, { terraSpecial } from 'src/libs/colors'
+import colors from 'src/libs/colors'
 
 
 const contextBarStyles = {
