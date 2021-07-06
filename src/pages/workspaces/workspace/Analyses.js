@@ -342,13 +342,13 @@ const Analyses = _.flow(
   return h(Dropzone, {
     accept: `.${tools.Jupyter.ext}, .${tools.RStudio.ext}`,
     disabled: !Utils.canWrite(accessLevel),
-    style: { flexGrow: 1, backgroundColor: colors.light() },
+    style: { flexGrow: 1, backgroundColor: colors.light(), height: '100%' },
     activeStyle: { backgroundColor: colors.accent(0.2), cursor: 'copy' },
     onDropRejected: () => reportError('Not a valid analysis file',
       'The selected file is not a .ipynb notebook file or an .Rmd rstudio file. Ensure your file has the proper extension.'),
     onDropAccepted: uploadFiles
   }, [({ openUploader }) => h(Fragment, [
-    analyses && h(PageBox, { style: { height: '100%' } }, [
+    analyses && h(PageBox, { style: { height: '100%', margin: '0px', padding: '3rem' } }, [
       div({ style: { display: 'flex', marginBottom: '1rem' } }, [
         div({ style: { color: colors.dark(), fontSize: 24, fontWeight: 600 } }, ['Your Analyses']),
         h(ButtonOutline, {

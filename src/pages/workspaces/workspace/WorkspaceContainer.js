@@ -135,6 +135,9 @@ const WorkspaceContainer = ({ namespace, name, breadcrumbs, topBarContent, title
     showTabBar && h(WorkspaceTabs, { namespace, name, activeTab, refresh, workspace, deletingWorkspace, setDeletingWorkspace, cloningWorkspace, setCloningWorkspace, sharingWorkspace, setSharingWorkspace }),
     div({ role: 'main', style: Style.elements.pageContentContainer },
       // Display the context bar only if the analysis tab is visible, for now
+      // This logic will need to change a bit when we want the analysis tab visible but the context bar visible for only the analysis tab
+      // In particular, the background coloring is applicable for the analysis tab at all times, even when context bar is not visible
+      // proposed solution: the context bar and analysis tab should be housed in one component, and that is what should be references by the router
       (isAnalysisTabVisible() && activeTab === 'analyses' ?
         [div({ style: { flex: 1, display: 'flex' } }, [
           div({ style: { flex: 1 } }, [
