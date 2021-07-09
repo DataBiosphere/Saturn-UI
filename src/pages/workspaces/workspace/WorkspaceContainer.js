@@ -134,7 +134,7 @@ const WorkspaceContainer = ({ namespace, name, breadcrumbs, topBarContent, title
     ]),
     showTabBar && h(WorkspaceTabs, { namespace, name, activeTab, refresh, workspace, deletingWorkspace, setDeletingWorkspace, cloningWorkspace, setCloningWorkspace, sharingWorkspace, setSharingWorkspace }),
     div({ role: 'main', style: Style.elements.pageContentContainer },
-      // Display the context bar only if the analysis tab is visible, for now
+      // When we switch this over to all tabs, ensure other workspace tabs look the same when inside these divs
       (isAnalysisTabVisible() && activeTab === 'analyses' ?
         [div({ style: { flex: 1, display: 'flex' } }, [
           div({ style: { flex: 1 } }, [

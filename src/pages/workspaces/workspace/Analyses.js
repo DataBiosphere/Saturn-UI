@@ -2,18 +2,16 @@ import * as clipboard from 'clipboard-polyfill/text'
 import _ from 'lodash/fp'
 import * as qs from 'qs'
 import { Fragment, useEffect, useState } from 'react'
-import { a, div, h, img, label } from 'react-hyperscript-helpers'
+import { a, div, h, img } from 'react-hyperscript-helpers'
 import * as breadcrumbs from 'src/components/breadcrumbs'
 import { requesterPaysWrapper, withRequesterPaysHandler } from 'src/components/bucket-utils'
-import { ViewToggleButtons, withViewToggle } from 'src/components/CardsListToggle'
+import { withViewToggle } from 'src/components/CardsListToggle'
 import {
   ButtonOutline,
   ButtonPrimary,
-  Clickable,
-  IdContainer,
+  Clickable, HeaderRenderer,
   Link,
   PageBox,
-  Select,
   spinnerOverlay
 } from 'src/components/common'
 import Dropzone from 'src/components/Dropzone'
@@ -32,6 +30,7 @@ import {
   tools
 } from 'src/components/notebook-utils'
 import { makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
+import { ariaSort } from 'src/components/table'
 import TooltipTrigger from 'src/components/TooltipTrigger'
 import galaxyLogo from 'src/images/galaxy-logo.png'
 import jupyterLogo from 'src/images/jupyter-logo.svg'
@@ -50,36 +49,30 @@ import ExportAnalysisModal from 'src/pages/workspaces/workspace/notebooks/Export
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
 
 
-const analysisCardCommonStyles = listView => _.merge({ display: 'flex' },
-  listView ?
-    {
-      marginBottom: '0.5rem',
-      flexDirection: 'row',
-      alignItems: 'center'
-    } :
-    {
-      margin: '0 2.5rem 2.5rem 0',
-      height: 100,
-      width: 400,
-      flexDirection: 'column',
-      padding: 0
-    }
-)
-
 const noWrite = 'You do not have access to modify this workspace.'
 
 const sortTokens = {
-  lowerCaseName: notebook => notebook.name.toLowerCase()
+  name: notebook => notebook.name.toLowerCase()
 }
-const defaultSort = { label: 'Most Recently Updated', value: { field: 'updated', direction: 'desc' } }
-const sortOptions = [
-  defaultSort,
-  { label: 'Least Recently Updated', value: { field: 'updated', direction: 'asc' } },
-  { label: 'Alphabetical', value: { field: 'lowerCaseName', direction: 'asc' } },
-  { label: 'Reverse Alphabetical', value: { field: 'lowerCaseName', direction: 'desc' } }
-]
+const defaultSort = { label: 'Most Recently Updated', value: { field: 'lastModified', direction: 'desc' } }
 
-const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, listView, wsName, onRename, onCopy, onDelete, onExport, canWrite, currentUserHash, potentialLockers }) => {
+const analysisContextMenuSize = 18
+
+const AnalysisCardHeaders = Utils.memoWithName('AnalysisCardHeaders', ({ sort, onSort }) => {
+  return div({ style: { display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem', padding: '0 1rem 0 1.5rem', marginBottom: '0.5rem' } }, [
+    div({ 'aria-sort': ariaSort(sort, 'Application'), style: { flex: 1 } }, [
+      h(HeaderRenderer, { sort, onSort, name: 'application' })
+    ]),
+    div({ 'aria-sort': ariaSort(sort, 'name'), style: { flex: 5 } }, [
+      h(HeaderRenderer, { sort, onSort, name: 'name' })
+    ]),
+    div({ 'aria-sort': ariaSort(sort, 'lastModified'), style: { flex: '0 0 10%', justifyContent: 'flex-left', display: 'flex' } }, [
+      h(HeaderRenderer, { sort, onSort, name: 'lastModified' })
+    ])
+  ])
+})
+
+const AnalysisCard = ({ namespace, name, lastModified, metadata, application, wsName, onRename, onCopy, onDelete, onExport, canWrite, currentUserHash, potentialLockers }) => {
   const { lockExpiresAt, lastLockedBy } = metadata || {}
   const lockExpirationDate = new Date(parseInt(lockExpiresAt))
   const locked = currentUserHash && lastLockedBy && lastLockedBy !== currentUserHash && lockExpirationDate > Date.now()
@@ -145,70 +138,49 @@ const AnalysisCard = ({ namespace, name, updated, metadata, toolLabel, listView,
   }, [
     h(Link, { 'aria-label': 'Analyses menu', onClick: e => e.preventDefault() }, [
       icon('ellipsis-v', {
-        size: listView ? 18 : 16
+        size: analysisContextMenuSize
       })
     ])
   ])
 
-  const title = div({
+  //the flex values for columns here correspond to the flex values in the header
+  const artefactName = div({
     title: getDisplayName(name),
-    style: _.merge({
-      ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto'
-    }, listView ? {
-      marginLeft: '1rem', flexGrow: 1
-    } : { height: 60, padding: '1rem' })
-  }, getDisplayName(name))
+    style: {
+      ...Style.elements.card.title, whiteSpace: 'normal', overflowY: 'auto', flex: 5, textAlign: 'left'
+    }
+  }, [getDisplayName(name)])
 
-  const appIconSrc = Utils.switchCase(toolLabel, [tools.Jupyter.label, () => jupyterLogo], [tools.RStudio.label, () => rLogo])
-  const appIcon = div({ style: { marginRight: '1rem' } }, [
-    img({ src: appIconSrc, style: { height: 40, width: 40 } })
+  const toolIconSrc = Utils.switchCase(application,
+    [tools.Jupyter.label, () => jupyterLogo],
+    [tools.RStudio.label, () => rLogo])
+  const toolIcon = div({ style: { marginRight: '1rem' } }, [
+    img({ src: toolIconSrc, style: { height: 40, width: 50 } })
+  ])
+
+  const toolContainer = div({ style: { display: 'flex', flex: 1, flexDirection: 'row', alignItems: 'center' } }, [
+    toolIcon,
+    // this is the tool name, i.e. 'Jupyter'. It is named identical to the header row to simplify the sorting code at the cost of naming consistency.
+    application
   ])
 
   return a({
     href: analysisLink,
-    style: {
-      ...Style.elements.card.container,
-      ...analysisCardCommonStyles(listView),
-      flexShrink: 0
-    }
-  }, listView ? [
-    appIcon,
-    toolLabel,
-    title,
-    div({ style: { flexGrow: 1 } }),
-    locked && h(Clickable, {
-      style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
-      tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
-    }, [icon('lock')]),
-    h(TooltipTrigger, { content: Utils.makeCompleteDate(updated) }, [
-      div({ style: { fontSize: '0.8rem', marginRight: '0.5rem' } },
-        `Last edited: ${Utils.makePrettyDate(updated)}`)
-    ]),
-    analysisMenu
-  ] : [
-    div({ style: { display: 'flex' } }, [
-      title,
-      div({ style: { flexGrow: 1 } }),
-      locked && h(Clickable, {
-        style: { display: 'flex', padding: '1rem', color: colors.dark(0.75) },
-        tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
-      }, [icon('lock')])
-    ]),
-    div({
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderTop: `solid 1px ${colors.dark(0.4)}`,
-        paddingLeft: '0.5rem', paddingRight: '0.5rem', height: '2.5rem',
-        backgroundColor: colors.light(0.4),
-        borderRadius: '0 0 5px 5px'
-      }
-    }, [
-      h(TooltipTrigger, { content: Utils.makeCompleteDate(updated) }, [
-        div({ style: { fontSize: '0.8rem', marginRight: '0.5rem' } }, [
-          'Last edited: ',
-          Utils.makePrettyDate(updated)
+    style: _.merge({
+      ...Style.cardList.longCardShadowless
+    }, { marginBottom: '.75rem', paddingLeft: '1.5rem' })
+  }, [
+    toolContainer,
+    artefactName,
+    //The 10% allows for the longest date possible (September XX, XXXX), plus a locked symbol, without text wrapping when the screen is maximized
+    div({ style: { flex: '0 0 10%', display: 'flex', flexDirection: 'row', justifyContent: 'flex-left' } }, [
+      div({ style: { flex: 1, display: 'flex' } }, [
+        locked && h(Clickable, {
+          style: { display: 'flex', paddingRight: '1rem', color: colors.dark(0.75) },
+          tooltip: `This analysis is currently being edited by ${lockedBy || 'another user'}`
+        }, [icon('lock')]),
+        h(TooltipTrigger, { content: Utils.makeCompleteDate(lastModified) }, [
+          div({ style: { fontSize: '0.8rem', display: 'flex', alignItems: 'center' } }, [Utils.makePrettyDate(lastModified)])
         ])
       ]),
       analysisMenu
@@ -228,7 +200,7 @@ const Analyses = _.flow(
   withViewToggle('analysesTab')
 )(({
   apps, name: wsName, namespace, workspace, workspace: { accessLevel, canShare, workspace: { bucketName } },
-  refreshApps, onRequesterPaysError, listView, setListView, runtimes,
+  refreshApps, onRequesterPaysError, runtimes,
   persistentDisks,
   refreshRuntimes,
   galaxyDataDisks
@@ -260,11 +232,12 @@ const Analyses = _.flow(
     Utils.withBusyState(setBusy)
   )(async () => {
     const notebooks = await Ajax(signal).Buckets.listNotebooks(namespace, bucketName)
-    const enhancedNotebooks = _.map(notebook => _.merge(notebook, { toolLabel: tools.Jupyter.label }), notebooks)
+    //we map the `toolLabel` and `updated` fields to their corresponding header label, which simplifies the table sorting code
+    const enhancedNotebooks = _.map(notebook => _.merge(notebook, { application: tools.Jupyter.label, lastModified: notebook.updated }), notebooks)
     const rmds = await Ajax(signal).Buckets.listRmds(namespace, bucketName)
-    const enhancedRmd = _.map(rmd => _.merge(rmd, { toolLabel: tools.RStudio.label }), rmds)
+    const enhancedRmd = _.map(rmd => _.merge(rmd, { application: tools.RStudio.label, lastModified: rmd.updated }), rmds)
     const analyses = _.concat(enhancedNotebooks, enhancedRmd)
-    setAnalyses(_.reverse(_.sortBy('updated', analyses)))
+    setAnalyses(_.reverse(_.sortBy('lastModified', analyses)))
   })
 
   //TODO: eventually load app artefacts
@@ -336,9 +309,9 @@ const Analyses = _.flow(
     const renderedAnalyses = _.flow(
       _.filter(({ name }) => Utils.textMatch(filter, getDisplayName(name))),
       _.orderBy(sortTokens[field] || field, direction),
-      _.map(({ name, updated, metadata, toolLabel }) => h(AnalysisCard, {
+      _.map(({ name, lastModified, metadata, application }) => h(AnalysisCard, {
         key: name,
-        name, updated, metadata, toolLabel, listView, namespace, wsName, canWrite, currentUserHash, potentialLockers,
+        name, lastModified, metadata, application, namespace, wsName, canWrite, currentUserHash, potentialLockers,
         onRename: () => setRenamingAnalysisName(name),
         onCopy: () => setCopyingAnalysisName(name),
         onExport: () => setExportingAnalysisName(name),
@@ -348,7 +321,8 @@ const Analyses = _.flow(
 
     return div({
       style: {
-        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center' }, _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : {})
+        ..._.merge({ textAlign: 'center', display: 'flex', justifyContent: 'center', padding: '0 1rem 0 1rem' },
+          _.isEmpty(analyses) ? { alignItems: 'center', height: '80%' } : { flexDirection: 'column' })
       }
     }, [
       Utils.cond(
@@ -356,8 +330,10 @@ const Analyses = _.flow(
         [!_.isEmpty(analyses) && _.isEmpty(renderedAnalyses), () => {
           return div({ style: { fontStyle: 'italic' } }, ['No matching analyses'])
         }],
-        [listView, () => div({ style: { flex: 1 } }, [renderedAnalyses])],
-        () => div({ style: { display: 'flex', flexWrap: 'wrap' } }, renderedAnalyses)
+        [Utils.DEFAULT, () => h(Fragment, [
+          h(AnalysisCardHeaders, { sort: sortOrder, onSort: setSortOrder }),
+          div({ role: 'list', 'aria-label': 'analysis artefacts in workspace', style: { flexGrow: 1, width: '100%' } }, [renderedAnalyses])
+        ])]
       )
     ])
   }
@@ -366,13 +342,13 @@ const Analyses = _.flow(
   return h(Dropzone, {
     accept: `.${tools.Jupyter.ext}, .${tools.RStudio.ext}`,
     disabled: !Utils.canWrite(accessLevel),
-    style: { flexGrow: 1 },
+    style: { flexGrow: 1, backgroundColor: colors.light(), height: '100%' },
     activeStyle: { backgroundColor: colors.accent(0.2), cursor: 'copy' },
     onDropRejected: () => reportError('Not a valid analysis file',
       'The selected file is not a .ipynb notebook file or an .Rmd rstudio file. Ensure your file has the proper extension.'),
     onDropAccepted: uploadFiles
   }, [({ openUploader }) => h(Fragment, [
-    analyses && h(PageBox, { style: { height: '100%' } }, [
+    analyses && h(PageBox, { style: { height: '100%', margin: '0px', padding: '3rem' } }, [
       div({ style: { display: 'flex', marginBottom: '1rem' } }, [
         div({ style: { color: colors.dark(), fontSize: 24, fontWeight: 600 } }, ['Your Analyses']),
         h(ButtonOutline, {
@@ -407,19 +383,6 @@ const Analyses = _.flow(
           onChange: setFilter,
           value: filter
         }),
-        !_.isEmpty(analyses) && h(IdContainer, [id => h(Fragment, [
-          label({ htmlFor: id, style: { marginLeft: 'auto', marginRight: '0.75rem' } }, ['Sort By:']),
-          h(Select, {
-            id,
-            value: sortOrder,
-            isClearable: false,
-            styles: { container: old => ({ ...old, width: 220, marginRight: '1.10rem' }) },
-            options: sortOptions,
-            onChange: selected => setSortOrder(selected.value)
-          })
-        ])]),
-        !_.isEmpty(analyses) && h(ViewToggleButtons, { listView, setListView }),
-        //TODO: create impl for analyses. will not live in the same place, but keeping code and state for reference
         h(NewAnalysisModal, {
           isOpen: creating,
           namespace,
