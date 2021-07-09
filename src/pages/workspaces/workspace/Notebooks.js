@@ -20,7 +20,7 @@ import { reportError, withErrorReporting } from 'src/libs/error'
 import { versionTag } from 'src/libs/logos'
 import * as Nav from 'src/libs/nav'
 import { notify } from 'src/libs/notifications'
-import { appIsSettingUp, convertedAppStatus, currentApp, currentAttachedDataDisk, getGalaxyCost, isCurrentGalaxyDiskDetaching } from 'src/libs/runtime-utils'
+import { appIsSettingUp, convertedAppStatus, getCurrentApp, currentAttachedDataDisk, getGalaxyCost, isCurrentGalaxyDiskDetaching } from 'src/libs/runtime-utils'
 import { authStore } from 'src/libs/state'
 import * as StateHistory from 'src/libs/state-history'
 import * as Style from 'src/libs/style'
@@ -293,7 +293,7 @@ const Notebooks = _.flow(
   // Render helpers
   const renderNotebooks = openUploader => {
     const { field, direction } = sortOrder
-    const app = currentApp(apps)
+    const app = getCurrentApp(apps)
     const canWrite = Utils.canWrite(accessLevel)
     const renderedNotebooks = _.flow(
       _.filter(({ name }) => Utils.textMatch(filter, printName(name))),

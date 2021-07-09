@@ -153,7 +153,7 @@ export const trimRuntimesOldestFirst = _.flow(
   _.sortBy('auditInfo.createdDate')
 )
 
-export const currentRuntime = runtimes => {
+export const getCurrentRuntime = runtimes => {
   // Status note: undefined means still loading, null means no runtime
   return !runtimes ? undefined : (_.flow(trimRuntimesOldestFirst, _.last)(runtimes) || null)
 }
@@ -167,7 +167,7 @@ export const machineCost = machineType => {
   return _.find(knownMachineType => knownMachineType.name === machineType, machineTypes).price
 }
 
-export const currentApp = _.flow(trimAppsOldestFirst, _.last)
+export const getCurrentApp = _.flow(trimAppsOldestFirst, _.last)
 
 export const currentAppIncludingDeleting = _.flow(_.sortBy('auditInfo.createdDate'), _.last)
 

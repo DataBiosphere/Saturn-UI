@@ -20,7 +20,7 @@ import Events from 'src/libs/events'
 import * as Nav from 'src/libs/nav'
 import { notify } from 'src/libs/notifications'
 import { getLocalPref, setLocalPref } from 'src/libs/prefs'
-import { collapsedRuntimeStatus, currentRuntime, usableStatuses } from 'src/libs/runtime-utils'
+import { collapsedRuntimeStatus, getCurrentRuntime, usableStatuses } from 'src/libs/runtime-utils'
 import { authStore, cookieReadyStore } from 'src/libs/state'
 import * as Utils from 'src/libs/utils'
 import ExportNotebookModal from 'src/pages/workspaces/workspace/notebooks/ExportNotebookModal'
@@ -45,7 +45,7 @@ const NotebookLauncher = _.flow(
   ({ queryParams, notebookName, workspace, workspace: { workspace: { namespace, name }, accessLevel, canCompute }, runtimes, persistentDisks, refreshRuntimes },
     ref) => {
     const [createOpen, setCreateOpen] = useState(false)
-    const runtime = currentRuntime(runtimes)
+    const runtime = getCurrentRuntime(runtimes)
     const { runtimeName, labels } = runtime || {}
     const status = collapsedRuntimeStatus(runtime)
     const [busy, setBusy] = useState()

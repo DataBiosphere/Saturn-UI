@@ -9,7 +9,7 @@ import { Ajax } from 'src/libs/ajax'
 import { withErrorReporting } from 'src/libs/error'
 import Events from 'src/libs/events'
 import * as Nav from 'src/libs/nav'
-import { collapsedRuntimeStatus, currentRuntime, usableStatuses } from 'src/libs/runtime-utils'
+import { collapsedRuntimeStatus, getCurrentRuntime, usableStatuses } from 'src/libs/runtime-utils'
 import { cookieReadyStore } from 'src/libs/state'
 import * as Utils from 'src/libs/utils'
 import { wrapWorkspace } from 'src/pages/workspaces/workspace/WorkspaceContainer'
@@ -26,7 +26,7 @@ const ApplicationLauncher = _.flow(
   const [showCreate, setShowCreate] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const runtime = currentRuntime(runtimes)
+  const runtime = getCurrentRuntime(runtimes)
   const runtimeStatus = collapsedRuntimeStatus(runtime) // preserve null vs undefined
 
   return h(Fragment, [

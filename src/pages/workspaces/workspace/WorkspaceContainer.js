@@ -3,7 +3,7 @@ import _ from 'lodash/fp'
 import { Fragment, useRef, useState } from 'react'
 import { br, div, h, h2, p, span } from 'react-hyperscript-helpers'
 import { ButtonPrimary, Clickable, comingSoon, Link, spinnerOverlay } from 'src/components/common'
-import { ContextBarButtons } from 'src/components/ContextBar'
+import { ContextBar } from 'src/components/ContextBar'
 import FooterWrapper from 'src/components/FooterWrapper'
 import { icon } from 'src/components/icons'
 import NewWorkspaceModal from 'src/components/NewWorkspaceModal'
@@ -18,7 +18,7 @@ import { isAnalysisTabVisible, isTerra } from 'src/libs/config'
 import { withErrorIgnoring, withErrorReporting } from 'src/libs/error'
 import * as Nav from 'src/libs/nav'
 import { clearNotification, notify } from 'src/libs/notifications'
-import { collapsedRuntimeStatus, currentApp, currentRuntime } from 'src/libs/runtime-utils'
+import { collapsedRuntimeStatus, getCurrentApp, getCurrentRuntime } from 'src/libs/runtime-utils'
 import { workspaceStore } from 'src/libs/state'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
@@ -140,15 +140,16 @@ const WorkspaceContainer = ({ namespace, name, breadcrumbs, topBarContent, title
           div({ style: { flex: 1 } }, [
             children
           ]),
-          div({ style: Style.elements.contextBarContainer }, [
-            h(ContextBarButtons, {
-              setDeletingWorkspace,
-              setCloningWorkspace,
-              setSharingWorkspace,
-              isOwner,
-              canShare
-            })
-          ])
+          workspace && h(ContextBar, {
+            setDeletingWorkspace,
+            setCloningWorkspace,
+            setSharingWorkspace,
+            isOwner,
+            canShare,
+            canCompute: !!(workspace?.canCompute || runtimes?.length),
+            workspace, refreshApps, refreshRuntimes,
+            runtimes, persistentDisks, galaxyDataDisks, apps
+          })
         ])] : [children]))
   ])
 }
@@ -201,7 +202,7 @@ const useCloudEnvironmentPolling = namespace => {
       setGalaxyDataDisks(galaxyDisks)
       setPersistentDisks(_.remove(disk => _.includes(disk.name, galaxyDiskNames), newDisks))
 
-      const runtime = currentRuntime(newRuntimes)
+      const runtime = getCurrentRuntime(newRuntimes)
       reschedule(maybeStale || _.includes(collapsedRuntimeStatus(runtime), ['Creating', 'Starting', 'Stopping', 'Updating', 'LeoReconfiguring']) ? 10000 : 120000)
     } catch (error) {
       reschedule(30000)
@@ -229,7 +230,7 @@ const useAppPolling = (namespace, name) => {
     try {
       const newApps = await Ajax(signal).Apps.list(namespace, { creator: getUser().email, saturnWorkspaceName: name })
       setApps(newApps)
-      const app = currentApp(newApps)
+      const app = getCurrentApp(newApps)
       reschedule((app && _.includes(app.status, ['PROVISIONING', 'PREDELETING'])) ? 10000 : 120000)
     } catch (error) {
       reschedule(30000)

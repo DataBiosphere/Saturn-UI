@@ -23,8 +23,8 @@ import {
   appIsSettingUp,
   collapsedRuntimeStatus,
   convertedAppStatus,
-  currentApp,
-  currentRuntime,
+  getCurrentApp,
+  getCurrentRuntime,
   persistentDiskCost,
   runtimeCost,
   trimRuntimesOldestFirst
@@ -192,8 +192,8 @@ export default class RuntimeManager extends PureComponent {
     const createdDate = new Date(runtime.createdDate)
     const dateNotified = getDynamic(sessionStorage, `notifiedOutdatedRuntime${runtime.id}`) || {}
     const rStudioLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name, application: 'RStudio' })
-    const app = currentApp(apps)
-    const prevApp = currentApp(prevProps.apps)
+    const app = getCurrentApp(apps)
+    const prevApp = getCurrentApp(prevProps.apps)
 
     if (runtime.status === 'Error' && prevRuntime.status !== 'Error' && !_.includes(runtime.id, errorNotifiedRuntimes.get())) {
       notify('error', 'Error Creating Cloud Environment', {
@@ -251,7 +251,7 @@ export default class RuntimeManager extends PureComponent {
 
   getCurrentRuntime() {
     const { runtimes } = this.props
-    return currentRuntime(runtimes)
+    return getCurrentRuntime(runtimes)
   }
 
   async executeAndRefresh(promise) {
@@ -343,7 +343,7 @@ export default class RuntimeManager extends PureComponent {
     const applicationName = isRStudioImage ? 'RStudio' : 'terminal'
     const applicationLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name, application: applicationName })
 
-    const app = currentApp(apps)
+    const app = getCurrentApp(apps)
 
     return h(Fragment, [
       app && div({ style: { ...styles.container, borderRadius: 5, marginRight: '1.5rem' } }, [

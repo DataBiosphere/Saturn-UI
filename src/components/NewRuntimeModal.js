@@ -17,7 +17,7 @@ import colors from 'src/libs/colors'
 import { withErrorReporting } from 'src/libs/error'
 import Events, { extractWorkspaceDetails } from 'src/libs/events'
 import {
-  currentRuntime, DEFAULT_DISK_SIZE, defaultDataprocMachineType, defaultGceMachineType, findMachineType, getDefaultMachineType,
+  getCurrentRuntime, DEFAULT_DISK_SIZE, defaultDataprocMachineType, defaultGceMachineType, findMachineType, getDefaultMachineType,
   persistentDiskCostMonthly,
   RadioBlock,
   runtimeConfigBaseCost, runtimeConfigCost
@@ -149,7 +149,7 @@ export class NewRuntimeModalBase extends Component {
 
   getCurrentRuntime() {
     const { runtimes } = this.props
-    return currentRuntime(runtimes)
+    return getCurrentRuntime(runtimes)
   }
 
   getCurrentPersistentDisk() {

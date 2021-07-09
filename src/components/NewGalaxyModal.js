@@ -14,7 +14,7 @@ import colors from 'src/libs/colors'
 import { withErrorReporting } from 'src/libs/error'
 import Events, { extractWorkspaceDetails } from 'src/libs/events'
 import {
-  currentApp, currentAttachedDataDisk, currentPersistentDisk, findMachineType, getGalaxyComputeCost,
+  getCurrentApp, currentAttachedDataDisk, currentPersistentDisk, findMachineType, getGalaxyComputeCost,
   getGalaxyDiskCost, RadioBlock
 } from 'src/libs/runtime-utils'
 import * as Style from 'src/libs/style'
@@ -42,7 +42,7 @@ const titleId = 'new-galaxy-modal-title'
 export const NewGalaxyModalBase = Utils.withDisplayName('NewGalaxyModal')(
   ({ onDismiss, onSuccess, apps, galaxyDataDisks, workspace, workspace: { workspace: { namespace, bucketName, name: workspaceName } }, isAnalysisMode = false }) => {
   // Assumption: If there is an app defined, there must be a data disk corresponding to it.
-    const app = currentApp(apps)
+    const app = getCurrentApp(apps)
     const attachedDataDisk = currentAttachedDataDisk(app, galaxyDataDisks)
 
     const [dataDiskSize, setDataDiskSize] = useState(attachedDataDisk?.size || defaultDataDiskSize)
