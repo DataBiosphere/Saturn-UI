@@ -1,6 +1,7 @@
 import 'src/style.css'
 
 import _ from 'lodash/fp'
+import React from 'react'
 import ReactDOM from 'react-dom'
 import { h } from 'react-hyperscript-helpers'
 import RModal from 'react-modal'
@@ -20,3 +21,8 @@ window._ = _
 ReactDOM.render(h(Main), appRoot)
 initializeAuth()
 initializeTCell()
+
+if (process.env.NODE_ENV !== 'production') {
+  const axe = require('@axe-core/react')
+  axe(React, ReactDOM, 1000)
+}

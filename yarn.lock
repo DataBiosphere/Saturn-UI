@@ -2,6 +2,14 @@
 # yarn lockfile v1
 
 
+"@axe-core/react@^4.2.1":
+  version "4.2.1"
+  resolved "https://registry.yarnpkg.com/@axe-core/react/-/react-4.2.1.tgz#bc96a3d454f3561483cc6e13c71ffe5e6fb3ed0c"
+  integrity sha512-g12GaW60emfQzedVCNlmr1OM2VXWwuGzoiv2zblxwjwN5DTL8LzDwqRoazo5FlxvOQ8re5k2/wXE7GFVxrYDwg==
+  dependencies:
+    axe-core "^4.2.1"
+    requestidlecallback "^0.3.0"
+
 "@babel/code-frame@7.10.4":
   version "7.10.4"
   resolved "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.10.4.tgz"
@@ -2619,6 +2627,11 @@ axe-core@^4.0.2:
   version "4.1.4"
   resolved "https://registry.npmjs.org/axe-core/-/axe-core-4.1.4.tgz"
   integrity sha512-Pdgfv6iP0gNx9ejRGa3zE7Xgkj/iclXqLfe7BnatdZz0QnLZ3jrRHUVH8wNSdN68w05Sk3ShGTb3ydktMTooig==
+
+axe-core@^4.2.1:
+  version "4.2.2"
+  resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-4.2.2.tgz#0c987d82c8b82b4b9b7a945f1b5ef0d8fed586ed"
+  integrity sha512-OKRkKM4ojMEZRJ5UNJHmq9tht7cEnRnqKG6KyB/trYws00Xtkv12mHtlJ0SK7cmuNbrU8dPUova3ELTuilfBbw==
 
 axobject-query@^2.2.0:
   version "2.2.0"
@@ -10134,6 +10147,11 @@ request@^2.88.2:
     tough-cookie "~2.5.0"
     tunnel-agent "^0.6.0"
     uuid "^3.3.2"
+
+requestidlecallback@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/requestidlecallback/-/requestidlecallback-0.3.0.tgz#6fb74e0733f90df3faa4838f9f6a2a5f9b742ac5"
+  integrity sha1-b7dOBzP5DfP6pIOPn2oqX5t0KsU=
 
 require-directory@^2.1.1:
   version "2.1.1"
