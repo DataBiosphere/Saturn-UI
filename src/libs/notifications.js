@@ -147,8 +147,9 @@ const showNotification = ({ id, timeout }) => {
     ]),
     container: 'top-right',
     dismiss: { duration: !!timeout ? timeout : 0, click: false, touch: false },
-    animationIn: ['animate__animated', 'animate__slideInRight'],
-    animationOut: ['animate__animated', 'animate__slideOutRight'],
+    animationIn: ['animate__animated', 'animate__fadeIn'],
+    animationOut: ['animate__animated', 'animate__fadeOut'],
+    insert: 'bottom',
     width: 350
   })
 }

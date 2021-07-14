@@ -83,7 +83,7 @@ const NpsSurvey = () => {
   _.range(0, 11))
 
   return requestable && div({
-    className: 'animate__animated animate__slideInRight',
+    className: 'animate__animated animate__fadeIn',
     style: {
       position: 'fixed', bottom: '1.5rem', right: expanded ? '1.5rem' : 0,
       transition: 'right 0.2s linear',
