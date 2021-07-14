@@ -19,7 +19,8 @@ const LaunchAnalysisModal = ({
   onDismiss, entityMetadata,
   workspace, workspace: { workspace: { namespace, name: workspaceName, bucketName } }, processSingle,
   entitySelectionModel: { type, selectedEntities, newSetName },
-  config, config: { rootEntityType }, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks, onSuccess
+  config, config: { rootEntityType }, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks,
+  retryWithMoreMemory, retryMemoryFactor, onSuccess
 }) => {
   const [launching, setLaunching] = useState(undefined)
   const [message, setMessage] = useState(undefined)
@@ -53,6 +54,7 @@ const LaunchAnalysisModal = ({
       const { submissionId } = await launch({
         isSnapshot: type === processSnapshotTable,
         workspace, config, selectedEntityType, selectedEntityNames, newSetName, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks,
+        memoryRetryMultiplier: retryWithMoreMemory ? retryMemoryFactor : undefined,
         onProgress: stage => {
           setMessage({ createSet: 'Creating set...', launch: 'Launching analysis...', checkBucketAccess: 'Checking bucket access...' }[stage])
         }

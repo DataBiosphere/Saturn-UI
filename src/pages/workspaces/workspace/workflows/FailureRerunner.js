@@ -27,7 +27,7 @@ export const rerunFailures = async ({ workspace, workspace: { workspace: { names
   const eventData = { ...extractWorkspaceDetails(workspace), configNamespace, configName }
 
   try {
-    const [{ workflows, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks }, config] = await Promise.all([
+    const [{ workflows, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks, memoryRetryMultiplier }, config] = await Promise.all([
       Ajax().Workspaces.workspace(namespace, name).submission(submissionId).get(),
       Ajax().Workspaces.workspace(namespace, name).methodConfig(configNamespace, configName).get()
     ])
@@ -40,7 +40,7 @@ export const rerunFailures = async ({ workspace, workspace: { workspace: { names
         _.map('workflowEntity.entityName')
       )(workflows),
       newSetName: Utils.sanitizeEntityName(`${configName}-resubmission-${new Date().toISOString().slice(0, -5)}`),
-      useCallCache, deleteIntermediateOutputFiles, useReferenceDisks,
+      useCallCache, deleteIntermediateOutputFiles, useReferenceDisks, memoryRetryMultiplier,
       onProgress: stage => {
         rerunFailuresStatus.set({ text: { createSet: 'Creating set from failures...', launch: 'Launching new job...', checkBucketAccess: 'Checking bucket access...' }[stage] })
       }

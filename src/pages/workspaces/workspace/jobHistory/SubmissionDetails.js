@@ -96,7 +96,8 @@ const SubmissionDetails = _.flow(
    */
   const {
     cost, methodConfigurationName: workflowName, methodConfigurationNamespace: workflowNamespace, submissionDate,
-    submissionEntity: { entityType, entityName } = {}, submitter, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks, workflows = []
+    submissionEntity: { entityType, entityName } = {}, submitter, useCallCache, deleteIntermediateOutputFiles,
+    useReferenceDisks, memoryRetryMultiplier, workflows = []
   } = submission
 
   const filteredWorkflows = _.flow(
@@ -186,7 +187,8 @@ const SubmissionDetails = _.flow(
           )]),
           makeSection('Call Caching', [useCallCache ? 'Enabled' : 'Disabled']),
           makeSection('Delete Intermediate Outputs', [deleteIntermediateOutputFiles ? 'Enabled' : 'Disabled']),
-          makeSection('Use Reference Disks', [useReferenceDisks ? 'Enabled' : 'Disabled'])
+          makeSection('Use Reference Disks', [useReferenceDisks ? 'Enabled' : 'Disabled']),
+          makeSection('Retry with More Memory', [memoryRetryMultiplier !== 1 ? `Enabled with factor ${memoryRetryMultiplier}` : 'Disabled'])
         ])
       ]),
       div({ style: { margin: '1rem 0', display: 'flex', alignItems: 'center' } }, [

@@ -8,7 +8,7 @@ import {
 } from 'src/components/common'
 import Dropzone from 'src/components/Dropzone'
 import { centeredSpinner, icon } from 'src/components/icons'
-import { DelayedAutocompleteTextArea, DelayedSearchInput } from 'src/components/input'
+import { DelayedAutocompleteTextArea, DelayedSearchInput, NumberInput } from 'src/components/input'
 import { MarkdownViewer } from 'src/components/markdown'
 import Modal from 'src/components/Modal'
 import { InfoBox, makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
@@ -70,6 +70,12 @@ const styles = {
   },
   placeholder: {
     fontStyle: 'italic'
+  },
+  checkBoxSpanMargins: {
+    margin: '0 0.5rem 0 1rem'
+  },
+  checkBoxLeftMargin: {
+    marginLeft: '1rem'
   }
 }
 
@@ -316,6 +322,8 @@ const WorkflowView = _.flow(
       useCallCache: true,
       deleteIntermediateOutputFiles: false,
       useReferenceDisks: false,
+      retryWithMoreMemory: false,
+      retryMemoryFactor: 1.2,
       includeOptionalInputs: true,
       filter: '',
       errors: { inputs: {}, outputs: {} },
@@ -350,6 +358,9 @@ const WorkflowView = _.flow(
     })
   }
 
+  /** Returns the href link for the specified article. */
+  getSupportLink(article) { return `https://support.terra.bio/hc/en-us/articles/${article}` }
+
   render() {
     // isFreshData: controls spinnerOverlay on initial load
     // variableSelected: field of focus for bucket file browser
@@ -357,7 +368,8 @@ const WorkflowView = _.flow(
     // modifiedConfig: active data, potentially unsaved
     const {
       isFreshData, savedConfig, launching, activeTab, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks,
-      entitySelectionModel, variableSelected, modifiedConfig, updatingConfig, selectedSnapshotEntityMetadata, availableSnapshots
+      retryWithMoreMemory, retryMemoryFactor, entitySelectionModel, variableSelected, modifiedConfig, updatingConfig,
+      selectedSnapshotEntityMetadata, availableSnapshots
     } = this.state
     const { namespace, name, workspace } = this.props
     const workspaceId = { namespace, name }
@@ -373,7 +385,8 @@ const WorkflowView = _.flow(
         launching && h(LaunchAnalysisModal, {
           workspace, config: savedConfig, entityMetadata: selectedSnapshotEntityMetadata,
           accessLevel: workspace.accessLevel, bucketName: workspace.workspace.bucketName,
-          processSingle: this.isSingle(), entitySelectionModel, useCallCache, deleteIntermediateOutputFiles, useReferenceDisks,
+          processSingle: this.isSingle(), entitySelectionModel, useCallCache, deleteIntermediateOutputFiles,
+          useReferenceDisks, retryWithMoreMemory, retryMemoryFactor,
           onDismiss: () => this.setState({ launching: false }),
           onSuccess: submissionId => {
             const { methodRepoMethod: { methodVersion, methodNamespace, methodName, methodPath, sourceRepo } } = modifiedConfig
@@ -569,7 +582,7 @@ const WorkflowView = _.flow(
     const {
       modifiedConfig, savedConfig, saving, saved, exporting, copying, deleting, selectingData, activeTab, errors, synopsis, documentation,
       availableSnapshots, selectedSnapshotEntityMetadata, selectedEntityType, entityMetadata, entitySelectionModel, versionIds = [], useCallCache,
-      deleteIntermediateOutputFiles, useReferenceDisks, currentSnapRedacted, savedSnapRedacted, wdl
+      deleteIntermediateOutputFiles, useReferenceDisks, retryWithMoreMemory, retryMemoryFactor, currentSnapRedacted, savedSnapRedacted, wdl
     } = this.state
     const { name, methodRepoMethod: { methodPath, methodVersion, methodNamespace, methodName, sourceRepo }, rootEntityType } = modifiedConfig
     const entityTypes = _.keys(entityMetadata)
@@ -596,6 +609,7 @@ const WorkflowView = _.flow(
     const inputsValid = _.isEmpty(errors.inputs)
     const outputsValid = _.isEmpty(errors.outputs)
     const sourceDisplay = sourceRepo === 'agora' ? `${methodNamespace}/${methodName}/${methodVersion}` : `${methodPath}:${methodVersion}`
+    const clickToLearnMore = 'Click here to learn more.'
     return div({
       style: {
         position: 'relative',
@@ -762,40 +776,86 @@ const WorkflowView = _.flow(
                 ])
             ])
           ]),
-          div({ style: { marginTop: '1rem' } }, [
-            h(LabeledCheckbox, {
-              disabled: currentSnapRedacted || !!Utils.computeWorkspaceError(ws),
-              checked: useCallCache,
-              onChange: v => this.setState({ useCallCache: v })
-            }, [' Use call caching']),
-            span({ style: { margin: '0 0.5rem 0 1rem' } }, [
-              h(LabeledCheckbox, {
-                checked: deleteIntermediateOutputFiles,
-                onChange: v => this.setState({ deleteIntermediateOutputFiles: v }),
-                style: { marginLeft: '1rem' }
-              }, [' Delete intermediate outputs'])
+          div({ style: { display: 'flex', alignItems: 'baseline', minWidth: 'max-content' } }, [
+            // This span is to prevent vertical resizing when the memory retry multiplier input is visible.
+            span({ style: { marginTop: '0.5rem', marginBottom: '0.5rem' } }, [
+              span([
+                h(LabeledCheckbox, {
+                  disabled: currentSnapRedacted || !!Utils.computeWorkspaceError(ws),
+                  checked: useCallCache,
+                  onChange: v => this.setState({ useCallCache: v })
+                }, [' Use call caching'])
+              ]),
+              span({ style: styles.checkBoxSpanMargins }, [
+                h(LabeledCheckbox, {
+                  checked: deleteIntermediateOutputFiles,
+                  onChange: v => this.setState({ deleteIntermediateOutputFiles: v }),
+                  style: styles.checkBoxLeftMargin
+                }, [' Delete intermediate outputs'])
+              ]),
+              h(InfoBox, [
+                'If the workflow succeeds, only the final output will be saved. Subsequently, call caching cannot be used as the intermediate steps will be not available. ',
+                h(Link, { href: this.getSupportLink('360039681632'), ...Utils.newTabLinkProps },
+                  [clickToLearnMore])
+              ]),
+              span({ style: styles.checkBoxSpanMargins }, [
+                h(LabeledCheckbox, {
+                  checked: useReferenceDisks,
+                  onChange: v => this.setState({ useReferenceDisks: v }),
+                  style: styles.checkBoxLeftMargin
+                }, [' Use reference disks'])
+              ]),
+              h(InfoBox, [
+                'Use a reference disk image if available rather than localizing reference inputs. ',
+                h(Link, { href: this.getSupportLink('360056384631'), ...Utils.newTabLinkProps },
+                  [clickToLearnMore])
+              ]),
+              span({ style: styles.checkBoxSpanMargins }, [
+                h(LabeledCheckbox, {
+                  checked: retryWithMoreMemory,
+                  onChange: v => this.setState({ retryWithMoreMemory: v }),
+                  style: styles.checkBoxLeftMargin
+                }, [' Retry with more memory'])
+              ])
             ]),
-            h(InfoBox, [
-              'If the workflow succeeds, only the final output will be saved. Subsequently, call caching cannot be used as the intermediate steps will be not available. ',
-              h(Link, {
-                href: 'https://support.terra.bio/hc/en-us/articles/360039681632',
-                ...Utils.newTabLinkProps
-              }, ['Click here to learn more.'])
+            retryWithMoreMemory && span({ style: { margin: '0 0.5rem 0 0.5rem' } }, [
+              h(IdContainer, [
+                id => h(Fragment, [
+                  label({
+                    htmlFor: id,
+                    style: { ...styles.label, verticalAlign: 'middle' }
+                  }, ['Memory retry factor:']),
+                  div({ style: { display: 'inline-block', marginLeft: '0.25rem' } }, [
+                    h(NumberInput, {
+                      id,
+                      min: 1.1,
+                      max: 10,
+                      step: 0.1,
+                      isClearable: false,
+                      onlyInteger: false,
+                      value: retryMemoryFactor,
+                      style: { width: '5rem' },
+                      onChange: v => this.setState({ retryMemoryFactor: v })
+                    })
+                  ])
+                ])
+              ])
             ]),
-            span({ style: { margin: '0 0.5rem 0 1rem' } }, [
-              h(LabeledCheckbox, {
-                checked: useReferenceDisks,
-                onChange: v => this.setState({ useReferenceDisks: v }),
-                style: { marginLeft: '1rem' }
-              }, [' Use reference disks'])
-            ]),
-            h(InfoBox, [
-              'Use a reference disk image if available rather than localizing reference inputs. ',
-              h(Link, {
-                href: 'https://support.terra.bio/hc/en-us/articles/360056384631',
-                ...Utils.newTabLinkProps
-              }, ['Click here to learn more.'])
-            ])
+            // We show either an info message or a warning, based on whether increasing memory on retries is
+            // enabled and the value of the retry multiplier.
+            (retryWithMoreMemory && retryMemoryFactor > 2 ?
+              h(InfoBox,
+                { style: { color: colors.warning() }, iconOverride: 'warning-standard' }, [
+                  'Retry factors above 2 are not recommended. The retry factor compounds and may substantially increase costs. ',
+                  h(Link, { href: this.getSupportLink('4403215299355'), ...Utils.newTabLinkProps },
+                    [clickToLearnMore])
+                ]) :
+              h(InfoBox, [
+                'If a task has a maxRetries value greater than zero and fails because it ran out of memory, retry it with more memory. ',
+                h(Link, { href: this.getSupportLink('4403215299355'), ...Utils.newTabLinkProps },
+                  [clickToLearnMore])
+              ])
+            )
           ]),
           h(StepButtons, {
             tabs: [
