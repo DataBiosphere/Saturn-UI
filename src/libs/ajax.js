@@ -826,10 +826,13 @@ const Workspaces = signal => ({
         return fetchOrchestration(`api/${root}/importEntities`, _.merge(authOpts(), { body: formData, signal, method: 'POST' }))
       },
 
-      importFlexibleEntitiesFile: file => {
+      // TODO: async=true|false needs to be an option, not hardcoded
+      // TODO: in case of asyc=false, this will not return valid json
+      importFlexibleEntitiesFile: async file => {
         const formData = new FormData()
         formData.set('entities', file)
-        return fetchOrchestration(`api/${root}/flexibleImportEntities`, _.merge(authOpts(), { body: formData, signal, method: 'POST' }))
+        const res = await fetchOrchestration(`api/${root}/flexibleImportEntities?async=true`, _.merge(authOpts(), { body: formData, signal, method: 'POST' }))
+        return res.json()
       },
 
       importPFB: async url => {
