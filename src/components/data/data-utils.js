@@ -20,7 +20,8 @@ import colors from 'src/libs/colors'
 import { reportError } from 'src/libs/error'
 import Events from 'src/libs/events'
 import { FormLabel } from 'src/libs/forms'
-import { requesterPaysProjectStore } from 'src/libs/state'
+import { notify } from 'src/libs/notifications'
+import { pfbImportJobStore, requesterPaysProjectStore } from 'src/libs/state'
 import * as StateHistory from 'src/libs/state-history'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
@@ -234,7 +235,12 @@ export const EntityUploader = ({ onSuccess, onDismiss, namespace, name, entityTy
     setUploading(true)
     try {
       const workspace = Ajax().Workspaces.workspace(namespace, name)
-      await (useFireCloudDataModel ? workspace.importEntitiesFile : workspace.importFlexibleEntitiesFile)(file)
+      const { jobId } = await (useFireCloudDataModel ? workspace.importEntitiesFile : workspace.importFlexibleEntitiesFile)(file)
+      pfbImportJobStore.update(Utils.append({ targetWorkspace: { namespace, name }, jobId }))
+      notify('info', 'Data import in progress.', {
+        id: jobId,
+        message: 'Data will show up incrementally as the job progresses.'
+      })
       onSuccess()
       Ajax().Metrics.captureEvent(Events.workspaceDataUpload, {
         workspaceNamespace: namespace, workspaceName: name
@@ -269,7 +275,7 @@ export const EntityUploader = ({ onSuccess, onDismiss, namespace, name, entityTy
           disabled: !currentFile || isInvalid || uploading,
           tooltip: !currentFile || isInvalid ? 'Please select valid data to upload' : 'Upload selected data',
           onClick: doUpload
-        }, ['Upload'])
+        }, ['Upload async']) // TODO: wording/UX
       }, [
         div({ style: { padding: '0 0 1rem' } },
           ['Choose the data import option below. ',
