@@ -153,7 +153,7 @@ const JobHistory = _.flow(
     }
   })
 
-  const makeHeaderRenderer = name => () => h(HeaderRenderer, { sort, name, onSort: setSort })
+  const makeHeaderRenderer = (name, label) => () => h(HeaderRenderer, { sort, name, label, onSort: setSort })
 
 
   // Lifecycle
@@ -211,8 +211,7 @@ const JobHistory = _.flow(
           columns: [
             {
               size: { basis: 500, grow: 0 },
-              // headerRenderer: () => h(HeaderCell, ['Submission (click for details)']),
-              headerRenderer: makeHeaderRenderer('methodConfigurationName'),
+              headerRenderer: makeHeaderRenderer('methodConfigurationName', 'Submission (click for details)'),
               cellRenderer: ({ rowIndex }) => {
                 const {
                   methodConfigurationNamespace, methodConfigurationName, submitter, submissionId, workflowStatuses
@@ -257,8 +256,7 @@ const JobHistory = _.flow(
             },
             {
               size: { basis: 250, grow: 0 },
-              // headerRenderer: () => h(HeaderCell, ['Data entity']),
-              headerRenderer: makeHeaderRenderer('entityName'),
+              headerRenderer: makeHeaderRenderer('entityName', 'Data entity'),
               cellRenderer: ({ rowIndex }) => {
                 const { submissionEntity: { entityName, entityType } = {} } = sortedSubmissions[rowIndex]
                 return h(TooltipCell, [entityName && `${entityName} (${entityType})`])
@@ -266,8 +264,7 @@ const JobHistory = _.flow(
             },
             {
               size: { basis: 170, grow: 0 },
-              // headerRenderer: () => h(HeaderCell, ['No. of Workflows']),
-              headerRenderer: makeHeaderRenderer('numberOfWorkflows'),
+              headerRenderer: makeHeaderRenderer('numberOfWorkflows', 'Number of Workflows'),
               cellRenderer: ({ rowIndex }) => {
                 const { workflowStatuses } = sortedSubmissions[rowIndex]
                 return h(TextCell, Utils.formatNumber(_.sum(_.values(workflowStatuses))))
@@ -275,7 +272,6 @@ const JobHistory = _.flow(
             },
             {
               size: { basis: 150, grow: 0 },
-              // headerRenderer: () => h(HeaderCell, ['Status']),
               headerRenderer: makeHeaderRenderer('status'),
               cellRenderer: ({ rowIndex }) => {
                 const { workflowStatuses, status } = sortedSubmissions[rowIndex]
@@ -284,7 +280,6 @@ const JobHistory = _.flow(
             },
             {
               size: { min: 220, max: 220 },
-              // headerRenderer: () => h(HeaderCell, ['Actions']),
               headerRenderer: makeHeaderRenderer('actions'),
               cellRenderer: ({ rowIndex }) => {
                 const {
@@ -320,7 +315,7 @@ const JobHistory = _.flow(
             {
               size: { basis: 150, grow: 1 },
               // headerRenderer: () => h(HeaderCell, ['Submission ID']),
-              headerRenderer: makeHeaderRenderer('submissionId'),
+              headerRenderer: makeHeaderRenderer('submissionId', 'Submission ID'),
               cellRenderer: ({ rowIndex }) => {
                 const { submissionId } = sortedSubmissions[rowIndex]
                 return h(TooltipCell, { tooltip: submissionId }, [
