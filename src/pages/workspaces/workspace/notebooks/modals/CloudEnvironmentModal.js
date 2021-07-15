@@ -20,12 +20,13 @@ import {
   getConvertedRuntimeStatus, getConvertedAppStatus,
   getCurrentApp,
   getCurrentRuntime,
-  getGalaxyComputeCost, getGalaxyCostTextChildren, getIsAppBusy, isCurrentGalaxyDiskDetaching, persistentDiskCost,
+  getGalaxyCostTextChildren, getIsAppBusy, isCurrentGalaxyDiskDetaching, persistentDiskCost,
   runtimeCost, getIsRuntimeBusy
 } from 'src/libs/runtime-utils'
 import { cookieReadyStore } from 'src/libs/state'
 import * as Utils from 'src/libs/utils'
 import { formatUSD } from 'src/libs/utils'
+import * as Nav from 'src/libs/nav'
 
 
 const titleId = 'cloud-env-modal'
@@ -54,7 +55,6 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
       withErrorReporting('Error creating runtime'),
       Utils.withBusyState(setBusy)
     )(async () => {
-      console.log('in on success')
       setViewMode(undefined)
       await refreshRuntimes(true)
     })
@@ -91,11 +91,9 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
   const toolButtonDivStyles = { display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }
   const toolButtonStyles = { flex: '1 1 0%', maxWidth: 100, display: 'flex', flexDirection: 'column', border: '.5px solid grey', borderRadius: 16, paddingRight: '.75rem', paddingLeft: '.75rem', paddingTop: '.5rem', paddingBottom: '.5rem', alignItems: 'center', fontWeight: 550, fontSize: 11, color: colors.accent() }
 
-  console.log(runtimes)
   const currentRuntime = getCurrentRuntime(runtimes)
   const currentRuntimeStatus = getConvertedRuntimeStatus(currentRuntime)
   const currentRuntimeTool = currentRuntime?.labels?.tool
-  console.log(currentRuntime)
 
   const currentApp = getCurrentApp(apps)
 
@@ -246,30 +244,21 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
     [Utils.DEFAULT, () => span(['None'])]
   )
 
-  const isCloudEnvModalDisabled = toolLabel => {
-    if (toolLabel == tools.Jupyter.label) {
-      console.log('runtimeforTool')
-      console.log(getRuntimeForTool(toolLabel))
-      console.log('isbusy')
-      console.log(getIsRuntimeBusy(getRuntimeForTool(toolLabel)))
-    }
-    return Utils.cond(
-      [toolLabel === tools.galaxy.label, () => !canCompute || busy || isCurrentGalaxyDiskDetaching(apps) || getIsAppBusy(currentApp)],
-      [Utils.DEFAULT, () => {
-        const runtime = getRuntimeForTool(toolLabel)
-        return runtime ?
-          !canCompute || busy || getIsRuntimeBusy(runtime) :
-          !canCompute || busy || getIsRuntimeBusy(currentRuntime) //TODO:multiple runtimes: change this to not have the last check in the or
-      }]
-    )
-  }
-
-  // const isAppBusy =
+  const isCloudEnvModalDisabled = toolLabel => Utils.cond(
+    [toolLabel === tools.galaxy.label, () => !canCompute || busy || isCurrentGalaxyDiskDetaching(apps) || getIsAppBusy(currentApp)],
+    [Utils.DEFAULT, () => {
+      const runtime = getRuntimeForTool(toolLabel)
+      return runtime ?
+        !canCompute || busy || getIsRuntimeBusy(runtime) :
+        !canCompute || busy || getIsRuntimeBusy(currentRuntime) //TODO:multiple runtimes: change this to not have the last check in the or
+    }]
+  )
 
   const getToolLaunchClickableProps = toolLabel => {
     const doesCloudEnvForToolExist = currentRuntimeTool === toolLabel || (currentApp && toolLabel === tools.galaxy.label)
     //TODO what does cookieReady do? Found it in the galaxy app launch code, is it needed here?
-    const isDisabled = !doesCloudEnvForToolExist || !cookieReady
+    const isToolBusy = toolLabel === tools.galaxy.label ? getIsAppBusy(currentApp) || currentApp?.status === 'ERROR' : getIsRuntimeBusy(currentRuntime) || currentRuntime?.status === 'ERROR'
+    const isDisabled = !doesCloudEnvForToolExist || !cookieReady || !canCompute || busy || isToolBusy
     const baseProps = {
       'aria-label': `Launch ${toolLabel}`,
       disabled: isDisabled,
@@ -286,7 +275,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
       [tools.galaxy.label, () => {
         return {
           ...baseProps,
-          href: currentApp?.proxyUrls.galaxy,
+          href: currentApp?.proxyUrls?.galaxy,
           onClick: () => {
             onDismiss()
             Ajax().Metrics.captureEvent(Events.applicationLaunch, { app: 'Galaxy' })
@@ -294,10 +283,12 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
           ...Utils.newTabLinkPropsWithReferrer
         }
       }], [Utils.DEFAULT, () => {
+        const applicationLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name: workspaceName, application: toolLabel })
         return {
           ...baseProps,
-          href: toolLabel === tools.Jupyter.label ? '' : '', //TODO: link
+          href: applicationLaunchLink, //TODO: link
           onClick: () => {
+            (currentRuntime?.status === 'Stopped' ? () => startApp(toolLabel) : () => {})()
             onDismiss()
             //TODO: metrics?
           }

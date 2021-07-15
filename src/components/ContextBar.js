@@ -6,6 +6,10 @@ import { makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigg
 import colors, { terraSpecial } from 'src/libs/colors'
 import * as Style from 'src/libs/style'
 import { CloudEnvironmentModal } from 'src/pages/workspaces/workspace/notebooks/modals/CloudEnvironmentModal'
+import { getCurrentRuntime, getIsRuntimeBusy } from 'src/libs/runtime-utils'
+import { tools } from 'src/components/notebook-utils'
+import { Ajax } from 'src/libs/ajax'
+import * as Nav from 'src/libs/nav'
 
 
 const contextBarStyles = {
@@ -23,6 +27,16 @@ const contextBarStyles = {
 
 export const ContextBar = ({ setDeletingWorkspace, setCloningWorkspace, setSharingWorkspace, isOwner, canShare, canCompute, runtimes, apps, galaxyDataDisks, refreshRuntimes, refreshApps, workspace, persistentDisks, workspace: { workspace: { namespace, bucketName, name: workspaceName } } }) => {
   const [isCloudEnvOpen, setCloudEnvOpen] = useState(false)
+  const currentRuntime = getCurrentRuntime(runtimes)
+  const currentRuntimeTool = currentRuntime?.labels?.tool
+
+  const terminalDisabled = !(currentRuntimeTool === tools.Jupyter.label) || getIsRuntimeBusy(currentRuntime)
+  const terminalLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name: workspaceName, application: 'terminal' })
+
+  const startCurrentRuntime = () => {
+    const { googleProject, runtimeName } = currentRuntime
+    Ajax().Runtimes.runtime(googleProject, runtimeName).start()
+  }
 
   return h(Fragment, [
     h(CloudEnvironmentModal, {
@@ -72,9 +86,11 @@ export const ContextBar = ({ setDeletingWorkspace, setCloningWorkspace, setShari
           'aria-label': 'Compute Configuration'
         }, [icon('cloudBolt', { size: 24 })]),
         h(Clickable, {
-          style: contextBarStyles.contextBarButton,
+          style: { ...contextBarStyles.contextBarButton, color: terminalDisabled ? colors.dark(0.7) : contextBarStyles.contextBarButton.color },
           hover: { boxShadow: `inset -6px 0px ${terraSpecial(0.9)}` },
-          // TODO: add click handler
+          disabled: terminalDisabled,
+          href: terminalLaunchLink,
+          onClick: window.location.hash === terminalLaunchLink && currentRuntime?.status === 'Stopped' ? () => startCurrentRuntime() : undefined,
           tooltip: 'Terminal',
           tooltipDelay: 100,
           'aria-label': 'Terminal'
