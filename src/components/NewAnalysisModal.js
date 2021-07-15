@@ -24,33 +24,41 @@ export const NewAnalysisModal = Utils.withDisplayName('NewAnalysisModal')(
     const [busy, setBusy] = useState()
 
     const renderNewRuntimeModal = tool => h(NewRuntimeModalBase, {
-      isOpen: true, //always true, this is detached from dom for other viewmodes within this modal
+      isOpen: viewMode === NEW_JUPYTER_MODE || viewMode === NEW_RSTUDIO_MODE,
       isAnalysisMode: true,
       workspace,
       tool,
       runtimes,
       persistentDisks,
-      onDismiss,
+      onDismiss: () => {
+        setViewMode(undefined)
+        onDismiss()
+      },
       onSuccess: _.flow(
         withErrorReporting('Error creating runtime'),
         Utils.withBusyState(setBusy)
       )(async () => {
+        setViewMode(undefined)
         onSuccess()
         await refreshRuntimes(true)
       })
     })
 
     const renderNewGalaxyModal = () => h(NewGalaxyModalBase, {
-      isOpen: true,
+      isOpen: viewMode === NEW_GALAXY_MODE,
       isAnalysisMode: true,
       workspace,
       apps,
       galaxyDataDisks,
-      onDismiss,
+      onDismiss: () => {
+        setViewMode(undefined)
+        onDismiss()
+      },
       onSuccess: _.flow(
         withErrorReporting('Error creating app'),
         Utils.withBusyState(setBusy)
       )(async () => {
+        setViewMode(undefined)
         onSuccess()
         await refreshApps(true)
       })
@@ -95,12 +103,18 @@ export const NewAnalysisModal = Utils.withDisplayName('NewAnalysisModal')(
         onDismiss,
         onPrevious: !!viewMode ? () => setViewMode(undefined) : undefined
       }),
-      hr({ style: { borderTop: '1px solid', width: '100%', color: colors.accent() } }),
+      viewMode !== undefined && hr({ style: { borderTop: '1px solid', width: '100%', color: colors.accent() } }),
       getView(),
       busy && spinnerOverlay
     ])
 
-    const modalProps = { isOpen, onDismiss, width, 'aria-labelledby': titleId }
+    const modalProps = {
+      isOpen, width, 'aria-labelledby': titleId,
+      onDismiss: () => {
+        setViewMode(undefined)
+        onDismiss()
+      }
+    }
 
     return h(ModalDrawer, { ...modalProps, children: modalBody })
   }

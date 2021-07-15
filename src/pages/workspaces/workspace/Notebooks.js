@@ -20,7 +20,15 @@ import { reportError, withErrorReporting } from 'src/libs/error'
 import { versionTag } from 'src/libs/logos'
 import * as Nav from 'src/libs/nav'
 import { notify } from 'src/libs/notifications'
-import { appIsSettingUp, convertedAppStatus, getCurrentApp, currentAttachedDataDisk, getGalaxyCost, isCurrentGalaxyDiskDetaching } from 'src/libs/runtime-utils'
+import {
+  appIsSettingUp,
+  getConvertedAppStatus,
+  getCurrentApp,
+  currentAttachedDataDisk,
+  getGalaxyCost,
+  isCurrentGalaxyDiskDetaching,
+  getGalaxyCostTextChildren
+} from 'src/libs/runtime-utils'
 import { authStore } from 'src/libs/state'
 import * as StateHistory from 'src/libs/state-history'
 import * as Style from 'src/libs/style'
@@ -308,23 +316,20 @@ const Notebooks = _.flow(
       }))
     )(notebooks)
 
-    const getGalaxyText = (app, galaxyDataDisks) => {
-      const dataDisk = currentAttachedDataDisk(app, galaxyDataDisks)
-      return app ?
-        div({ style: { fontSize: 18, lineHeight: '22px', width: 160 } }, [
-          div(['Galaxy Interactive']),
-          div(['Environment']),
-          div({ style: { fontSize: 12, marginTop: 6 } },
-            [convertedAppStatus(app.status), dataDisk?.size ? ` (${Utils.formatUSD(getGalaxyCost(app, dataDisk.size))} / hr)` : ``]),
-          icon('trash', { size: 21 })
-        ]) :
-        div({ style: { fontSize: 18, lineHeight: '22px', width: 160, color: colors.accent() } }, [
-          div(['Create a Cloud']),
-          div(['Environment for ']),
-          div(['Galaxy ', versionTag('Beta', { color: colors.primary(1.5), backgroundColor: 'white', border: `1px solid ${colors.primary(1.5)}` })]),
-          icon('plus-circle', { style: { marginTop: '0.5rem' }, size: 21 })
-        ])
-    }
+    const getGalaxyText = (app, galaxyDataDisks) => app ?
+      div({ style: { fontSize: 18, lineHeight: '22px', width: 160 } }, [
+        div(['Galaxy Interactive']),
+        div(['Environment']),
+        div({ style: { fontSize: 12, marginTop: 6 } },
+          getGalaxyCostTextChildren(app, galaxyDataDisks)),
+        icon('trash', { size: 21 })
+      ]) :
+      div({ style: { fontSize: 18, lineHeight: '22px', width: 160, color: colors.accent() } }, [
+        div(['Create a Cloud']),
+        div(['Environment for ']),
+        div(['Galaxy ', versionTag('Beta', { color: colors.primary(1.5), backgroundColor: 'white', border: `1px solid ${colors.primary(1.5)}` })]),
+        icon('plus-circle', { style: { marginTop: '0.5rem' }, size: 21 })
+      ])
 
     return div({
       style: { display: 'flex', marginRight: listView ? undefined : '-2.5rem', alignItems: 'flex-start' }

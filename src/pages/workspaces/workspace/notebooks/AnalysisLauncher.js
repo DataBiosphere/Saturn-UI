@@ -25,7 +25,7 @@ import Events from 'src/libs/events'
 import * as Nav from 'src/libs/nav'
 import { notify } from 'src/libs/notifications'
 import { getLocalPref, setLocalPref } from 'src/libs/prefs'
-import { collapsedRuntimeStatus, getCurrentRuntime, usableStatuses } from 'src/libs/runtime-utils'
+import { getConvertedRuntimeStatus, getCurrentRuntime, usableStatuses } from 'src/libs/runtime-utils'
 import { authStore, cookieReadyStore } from 'src/libs/state'
 import * as Utils from 'src/libs/utils'
 import ExportAnalysisModal from 'src/pages/workspaces/workspace/notebooks/ExportNotebookModal'
@@ -52,7 +52,7 @@ const AnalysisLauncher = _.flow(
     const [createOpen, setCreateOpen] = useState(false)
     const runtime = getCurrentRuntime(runtimes)
     const { runtimeName, labels } = runtime || {}
-    const status = collapsedRuntimeStatus(runtime)
+    const status = getConvertedRuntimeStatus(runtime)
     const [busy, setBusy] = useState()
     const { mode } = queryParams
     const toolLabel = getTool(analysisName)
@@ -191,7 +191,7 @@ const PreviewHeader = ({ queryParams, runtime, readOnlyAccess, onCreateRuntime, 
   const [lockedBy, setLockedBy] = useState(null)
   const [exportingAnalysis, setExportingAnalysis] = useState(false)
   const [copyingAnalysis, setCopyingAnalysis] = useState(false)
-  const runtimeStatus = collapsedRuntimeStatus(runtime)
+  const runtimeStatus = getConvertedRuntimeStatus(runtime)
   const welderEnabled = runtime && !runtime.labels.welderInstallFailed
   const { mode } = queryParams
   const analysisLink = Nav.getLink('workspace-analysis-launch', { namespace, name, analysisName })

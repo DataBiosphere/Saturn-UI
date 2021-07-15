@@ -308,11 +308,11 @@ export const NewGalaxyModalBase = Utils.withDisplayName('NewGalaxyModal')(
       const gridStyle = { display: 'grid', gridTemplateColumns: '0.75fr 4.5rem 1fr 5.5rem 1fr 5.5rem', gridGap: '1rem', alignItems: 'center' }
       return Utils.cond(
         [currentDataDisk, () => {
-          return div({ marginTop: '0.75rem' }, [
+          return h(Fragment, [
             div({ style: { ...gridStyle, marginTop: '0.5rem' } }, [
               div({ style: styles.label }, ['Size (GB): ']), h(TooltipTrigger,
                 { content: ['Persistent disk of size ', currentDataDisk.size, ' GB already exists and will be attached upon Galaxy creation'] }, [
-                  div({ marginTop: '0.5rem', width: '5rem' }, [currentDataDisk.size])
+                  div([currentDataDisk.size])
                 ])
             ])
           ])

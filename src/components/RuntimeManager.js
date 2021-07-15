@@ -21,8 +21,8 @@ import * as Nav from 'src/libs/nav'
 import { clearNotification, notify } from 'src/libs/notifications'
 import {
   appIsSettingUp,
-  collapsedRuntimeStatus,
-  convertedAppStatus,
+  getConvertedRuntimeStatus,
+  getConvertedAppStatus,
   getCurrentApp,
   getCurrentRuntime,
   persistentDiskCost,
@@ -288,7 +288,7 @@ export default class RuntimeManager extends PureComponent {
       return null
     }
     const currentRuntime = this.getCurrentRuntime()
-    const currentStatus = collapsedRuntimeStatus(currentRuntime)
+    const currentStatus = getConvertedRuntimeStatus(currentRuntime)
 
     const renderIcon = () => {
       switch (currentStatus) {
@@ -336,7 +336,7 @@ export default class RuntimeManager extends PureComponent {
     const totalCost = _.sum(_.map(runtimeCost, runtimes)) + _.sum(_.map(persistentDiskCost, persistentDisks))
     const activeRuntimes = this.getActiveRuntimesOldestFirst()
     const activeDisks = _.remove({ status: 'Deleting' }, persistentDisks)
-    const { Creating: creating, Updating: updating, LeoReconfiguring: reconfiguring } = _.countBy(collapsedRuntimeStatus, activeRuntimes)
+    const { Creating: creating, Updating: updating, LeoReconfiguring: reconfiguring } = _.countBy(getConvertedRuntimeStatus, activeRuntimes)
     const isDisabled = !canCompute || creating || busy || updating || reconfiguring
 
     const isRStudioImage = currentRuntime?.labels.tool === 'RStudio'
@@ -360,7 +360,7 @@ export default class RuntimeManager extends PureComponent {
           img({ src: galaxyLogo, alt: '', style: { marginRight: '0.25rem' } }),
           div([
             div({ style: { fontSize: 12, fontWeight: 'bold' } }, ['Galaxy']),
-            div({ style: { fontSize: 10 } }, [convertedAppStatus(app.status)])
+            div({ style: { fontSize: 10 } }, [getConvertedAppStatus(app.status)])
           ])
         ])
       ]),
