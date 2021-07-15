@@ -2,7 +2,9 @@ import _ from 'lodash/fp'
 import { Fragment } from 'react'
 import { div, h, input, label } from 'react-hyperscript-helpers'
 import { IdContainer } from 'src/components/common'
-import { cloudServices, dataprocCpuPrice, ephemeralExternalIpAddressPrice, machineTypes, monthlyStoragePrice, storagePrice } from 'src/data/machines'
+import {
+  cloudServices, dataprocCpuPrice, ephemeralExternalIpAddressPrice, gpuTypes, machineTypes, monthlyStoragePrice, storagePrice
+} from 'src/data/machines'
 import colors from 'src/libs/colors'
 import * as Style from 'src/libs/style'
 import * as Utils from 'src/libs/utils'
@@ -10,6 +12,9 @@ import * as Utils from 'src/libs/utils'
 
 export const DEFAULT_DISK_SIZE = 50
 export const DEFAULT_BOOT_DISK_SIZE = 50
+
+export const DEFAULT_GPU_TYPE = 'nvidia-tesla-t4'
+export const DEFAULT_NUM_GPUS = 1
 
 export const usableStatuses = ['Updating', 'Running']
 
@@ -31,7 +36,7 @@ export const normalizeRuntimeConfig = ({
     numberOfPreemptibleWorkers: (isDataproc && numberOfWorkers && numberOfPreemptibleWorkers) || 0,
     workerMachineType: (isDataproc && numberOfWorkers && workerMachineType) || defaultDataprocMachineType,
     workerDiskSize: (isDataproc && numberOfWorkers && workerDiskSize) || DEFAULT_DISK_SIZE,
-    // One caveact with using DEFAULT_BOOT_DISK_SIZE here is this over-estimates old GCE runtimes without PD by 1 cent
+    // One caveat with using DEFAULT_BOOT_DISK_SIZE here is this over-estimates old GCE runtimes without PD by 1 cent
     // because those runtimes do not have a separate boot disk. But those old GCE runtimes are more than 1 year old if they exist.
     // Hence, we're okay with this caveat.
     bootDiskSize: bootDiskSize || DEFAULT_BOOT_DISK_SIZE
@@ -41,6 +46,13 @@ export const normalizeRuntimeConfig = ({
 export const findMachineType = name => {
   return _.find({ name }, machineTypes) || { name, cpu: '?', memory: '?', price: NaN, preemptiblePrice: NaN }
 }
+
+export const getValidGpuTypes = (numCpus, mem) => {
+  const validGpuTypes = _.filter(({ maxNumCpus, maxMem }) => numCpus <= maxNumCpus && mem <= maxMem, gpuTypes)
+  return validGpuTypes || { name: '?', type: '?', numGpus: '?', maxNumCpus: '?', maxMem: '?', price: NaN, preemptiblePrice: NaN }
+}
+
+const gpuCost = (gpuType, numGpus) => _.find({ type: gpuType, numGpus }, gpuTypes)?.price || NaN
 
 const dataprocCost = (machineType, numInstances) => {
   const { cpu: cpuPrice } = findMachineType(machineType)
@@ -67,6 +79,8 @@ export const runtimeConfigCost = config => {
   const { price: masterPrice } = findMachineType(masterMachineType)
   const { price: workerPrice, preemptiblePrice } = findMachineType(workerMachineType)
   const numberOfStandardVms = 1 + numberOfWorkers // 1 is for the master VM
+  const gpuConfig = config?.gpuConfig
+  const gpuEnabled = cloudService === cloudServices.GCE && !!gpuConfig
 
   return _.sum([
     masterPrice,
@@ -74,6 +88,7 @@ export const runtimeConfigCost = config => {
     numberOfPreemptibleWorkers * preemptiblePrice,
     numberOfPreemptibleWorkers * workerDiskSize * storagePrice,
     cloudService === cloudServices.DATAPROC && dataprocCost(workerMachineType, numberOfPreemptibleWorkers),
+    gpuEnabled && gpuCost(gpuConfig.gpuType, gpuConfig.numOfGpus),
     ephemeralExternalIpAddressCost({ numStandardVms: numberOfStandardVms, numPreemptibleVms: numberOfPreemptibleWorkers }),
     runtimeConfigBaseCost(config)
   ])
@@ -208,6 +223,15 @@ export const convertedAppStatus = appStatus => {
     ['STOPPING', () => _.capitalize('PAUSING')],
     ['STARTING', () => _.capitalize('RESUMING')],
     [Utils.DEFAULT, () => _.capitalize(appStatus)]
+  )
+}
+
+export const displayNameForGpuType = type => {
+  return Utils.switchCase(type,
+    ['nvidia-tesla-k80', () => 'NVIDIA Tesla K80'],
+    ['nvidia-tesla-p4', () => 'NVIDIA Tesla P4'],
+    ['nvidia-tesla-v100', () => 'NVIDIA Tesla V100'],
+    [Utils.DEFAULT, () => 'NVIDIA Tesla T4']
   )
 }
 

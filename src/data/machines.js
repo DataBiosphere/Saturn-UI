@@ -23,6 +23,32 @@ export const machineTypes = [
   { name: 'n1-highcpu-96', cpu: 96, memory: 86.4, price: 3.402, preemptiblePrice: 0.7200 }
 ]
 
+// As of June 21, 2021:
+// GPUs are only supported with general-purpose N1 or accelerator-optimized A2 machine types.
+// (https://cloud.google.com/compute/docs/gpus#restrictions)
+// Instances with GPUs also have limitations on maximum number of CPUs and memory they can have.
+// (https://cloud.google.com/compute/docs/gpus#other_available_nvidia_gpu_models)
+// NVIDIA Tesla P100 is not available within the zone 'us-central1-a`.
+// (https://cloud.google.com/compute/docs/gpus/gpu-regions-zones)
+// The limitations don't vary perfectly linearly so it seemed easier and less brittle to enumerate them.
+// Prices below are hourly and per GPU (https://cloud.google.com/compute/gpus-pricing).
+export const gpuTypes = [
+  { name: 'NVIDIA Tesla T4', type: 'nvidia-tesla-t4', numGpus: 1, maxNumCpus: 24, maxMem: 156, price: 0.3500, preemptiblePrice: 0.1100 },
+  { name: 'NVIDIA Tesla T4', type: 'nvidia-tesla-t4', numGpus: 2, maxNumCpus: 48, maxMem: 312, price: 0.7000, preemptiblePrice: 0.2200 },
+  { name: 'NVIDIA Tesla T4', type: 'nvidia-tesla-t4', numGpus: 4, maxNumCpus: 96, maxMem: 624, price: 1.4000, preemptiblePrice: 0.4400 },
+  { name: 'NVIDIA Tesla K80', type: 'nvidia-tesla-k80', numGpus: 1, maxNumCpus: 8, maxMem: 52, price: 0.4500, preemptiblePrice: 0.1350 },
+  { name: 'NVIDIA Tesla K80', type: 'nvidia-tesla-k80', numGpus: 2, maxNumCpus: 16, maxMem: 104, price: 0.9000, preemptiblePrice: 0.2700 },
+  { name: 'NVIDIA Tesla K80', type: 'nvidia-tesla-k80', numGpus: 4, maxNumCpus: 32, maxMem: 208, price: 1.3500, preemptiblePrice: 0.5400 },
+  { name: 'NVIDIA Tesla K80', type: 'nvidia-tesla-k80', numGpus: 8, maxNumCpus: 64, maxMem: 208, price: 1.8000, preemptiblePrice: 1.0800 },
+  { name: 'NVIDIA Tesla P4', type: 'nvidia-tesla-p4', numGpus: 1, maxNumCpus: 24, maxMem: 156, price: 0.6000, preemptiblePrice: 0.2160 },
+  { name: 'NVIDIA Tesla P4', type: 'nvidia-tesla-p4', numGpus: 2, maxNumCpus: 48, maxMem: 312, price: 1.2000, preemptiblePrice: 0.4320 },
+  { name: 'NVIDIA Tesla P4', type: 'nvidia-tesla-p4', numGpus: 4, maxNumCpus: 96, maxMem: 624, price: 1.8000, preemptiblePrice: 0.8640 },
+  { name: 'NVIDIA Tesla V100', type: 'nvidia-tesla-v100', numGpus: 1, maxNumCpus: 12, maxMem: 78, price: 2.4800, preemptiblePrice: 0.7400 },
+  { name: 'NVIDIA Tesla V100', type: 'nvidia-tesla-v100', numGpus: 2, maxNumCpus: 24, maxMem: 156, price: 4.9600, preemptiblePrice: 1.4800 },
+  { name: 'NVIDIA Tesla V100', type: 'nvidia-tesla-v100', numGpus: 4, maxNumCpus: 48, maxMem: 312, price: 9.9200, preemptiblePrice: 2.9600 },
+  { name: 'NVIDIA Tesla V100', type: 'nvidia-tesla-v100', numGpus: 8, maxNumCpus: 96, maxMem: 624, price: 19.8400, preemptiblePrice: 5.9200 }
+]
+
 export const cloudServices = {
   GCE: 'GCE',
   DATAPROC: 'DATAPROC'

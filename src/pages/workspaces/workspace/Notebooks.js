@@ -408,7 +408,7 @@ const Notebooks = _.flow(
         h(DelayedSearchInput, {
           'aria-label': 'Search notebooks',
           style: { marginRight: '0.75rem', width: 220 },
-          placeholder: 'SEARCH NOTEBOOKS',
+          placeholder: 'Search notebooks',
           onChange: setFilter,
           value: filter
         }),

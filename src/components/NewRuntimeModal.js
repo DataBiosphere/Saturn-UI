@@ -2,7 +2,9 @@ import _ from 'lodash/fp'
 import PropTypes from 'prop-types'
 import { Component, Fragment } from 'react'
 import { b, br, code, div, fieldset, h, label, legend, li, p, span, ul } from 'react-hyperscript-helpers'
-import { ButtonOutline, ButtonPrimary, ButtonSecondary, GroupedSelect, IdContainer, Link, Select, spinnerOverlay, WarningTitle } from 'src/components/common'
+import {
+  ButtonOutline, ButtonPrimary, ButtonSecondary, GroupedSelect, IdContainer, LabeledCheckbox, Link, Select, spinnerOverlay, WarningTitle
+} from 'src/components/common'
 import { icon } from 'src/components/icons'
 import { ImageDepViewer } from 'src/components/ImageDepViewer'
 import { NumberInput, TextInput, ValidatedInput } from 'src/components/input'
@@ -11,13 +13,17 @@ import { tools } from 'src/components/notebook-utils'
 import { InfoBox } from 'src/components/PopupTrigger'
 import { SaveFilesHelp } from 'src/components/runtime-common'
 import TitleBar from 'src/components/TitleBar'
+import TooltipTrigger from 'src/components/TooltipTrigger'
 import { cloudServices, machineTypes } from 'src/data/machines'
 import { Ajax } from 'src/libs/ajax'
 import colors from 'src/libs/colors'
 import { withErrorReporting } from 'src/libs/error'
 import Events, { extractWorkspaceDetails } from 'src/libs/events'
+import { versionTag } from 'src/libs/logos'
 import {
-  currentRuntime, DEFAULT_DISK_SIZE, defaultDataprocMachineType, defaultGceMachineType, findMachineType, getDefaultMachineType,
+  currentRuntime, DEFAULT_DISK_SIZE, DEFAULT_GPU_TYPE, DEFAULT_NUM_GPUS, defaultDataprocMachineType, defaultGceMachineType, displayNameForGpuType,
+  findMachineType,
+  getDefaultMachineType, getValidGpuTypes,
   persistentDiskCostMonthly,
   RadioBlock,
   runtimeConfigBaseCost, runtimeConfigCost
@@ -36,7 +42,7 @@ const styles = {
   titleBar: { marginBottom: '1rem' },
   drawerContent: { display: 'flex', flexDirection: 'column', flex: 1, padding: '1.5rem' },
   warningView: { backgroundColor: colors.warning(0.1) },
-  whiteBoxContainer: { padding: '1rem', borderRadius: 3, backgroundColor: 'white' }
+  whiteBoxContainer: { padding: '1.5rem', borderRadius: 3, backgroundColor: 'white' }
 }
 
 const terraDockerBaseGithubUrl = 'https://github.com/databiosphere/terra-docker'
@@ -46,7 +52,7 @@ const safeImageDocumentation = 'https://support.terra.bio/hc/en-us/articles/3600
 // distilled from https://github.com/docker/distribution/blob/95daa793b83a21656fe6c13e6d5cf1c3999108c7/reference/regexp.go
 const imageValidationRegexp = /^[A-Za-z0-9]+[\w./-]+(?::\w[\w.-]+)?(?:@[\w+.-]+:[A-Fa-f0-9]{32,})?$/
 
-const MachineSelector = ({ value, machineTypeOptions, onChange }) => {
+const WorkerSelector = ({ value, machineTypeOptions, onChange }) => {
   const { cpu: currentCpu, memory: currentMemory } = findMachineType(value)
   return h(Fragment, [
     h(IdContainer, [
@@ -131,15 +137,22 @@ export class NewRuntimeModalBase extends Component {
 
   getInitialState(runtime, disk) {
     const runtimeConfig = runtime?.runtimeConfig
+    const gpuConfig = runtimeConfig?.gpuConfig
+    const sparkMode = runtimeConfig?.cloudService === cloudServices.DATAPROC ? (runtimeConfig.numberOfWorkers === 0 ? 'master' : 'cluster') : false
+
     return {
       selectedPersistentDiskSize: disk?.size || DEFAULT_DISK_SIZE,
-      sparkMode: runtimeConfig?.cloudService === cloudServices.DATAPROC ? (runtimeConfig.numberOfWorkers === 0 ? 'master' : 'cluster') : false,
+      sparkMode,
       masterMachineType: runtimeConfig?.masterMachineType || runtimeConfig?.machineType,
       masterDiskSize: runtimeConfig?.masterDiskSize || runtimeConfig?.diskSize || DEFAULT_DISK_SIZE,
       numberOfWorkers: runtimeConfig?.numberOfWorkers || 2,
       numberOfPreemptibleWorkers: runtimeConfig?.numberOfPreemptibleWorkers || 0,
       workerMachineType: runtimeConfig?.workerMachineType || defaultDataprocMachineType,
-      workerDiskSize: runtimeConfig?.workerDiskSize || DEFAULT_DISK_SIZE
+      workerDiskSize: runtimeConfig?.workerDiskSize || DEFAULT_DISK_SIZE,
+      gpuEnabled: (!!gpuConfig && !sparkMode) || false,
+      hasGpu: !!gpuConfig,
+      gpuType: gpuConfig?.gpuType || DEFAULT_GPU_TYPE,
+      numGpus: gpuConfig?.numOfGpus || DEFAULT_NUM_GPUS
     }
   }
 
@@ -175,9 +188,8 @@ export class NewRuntimeModalBase extends Component {
       ...(desiredRuntime.cloudService === cloudServices.GCE ? {
         machineType: desiredRuntime.machineType || defaultGceMachineType,
         bootDiskSize: desiredRuntime.bootDiskSize,
-        ...(desiredRuntime.diskSize ? {
-          diskSize: desiredRuntime.diskSize
-        } : {})
+        ...(desiredRuntime.gpuConfig ? { gpuConfig: desiredRuntime.gpuConfig } : {}),
+        ...(desiredRuntime.diskSize ? { diskSize: desiredRuntime.diskSize } : {})
       } : {
         masterMachineType: desiredRuntime.masterMachineType || defaultDataprocMachineType,
         masterDiskSize: desiredRuntime.masterDiskSize,
@@ -239,6 +251,7 @@ export class NewRuntimeModalBase extends Component {
   )(async () => {
     const { onSuccess } = this.props
     const { currentRuntimeDetails, currentPersistentDiskDetails } = this.state
+    const { gpuEnabled, gpuType, numGpus } = this.state
     const { runtime: existingRuntime, persistentDisk: existingPersistentDisk } = this.getExistingEnvironmentConfig()
     const { runtime: desiredRuntime, persistentDisk: desiredPersistentDisk } = this.getDesiredEnvironmentConfig()
     const shouldUpdatePersistentDisk = this.canUpdatePersistentDisk() && !_.isEqual(desiredPersistentDisk, existingPersistentDisk)
@@ -262,7 +275,8 @@ export class NewRuntimeModalBase extends Component {
             size: desiredPersistentDisk.size,
             labels: { saturnWorkspaceName: name }
           }
-        })
+        }),
+        ...(gpuEnabled && { gpuConfig: { gpuType, numOfGpus: numGpus } })
       } : {
         masterMachineType: desiredRuntime.masterMachineType || defaultDataprocMachineType,
         masterDiskSize: desiredRuntime.masterDiskSize,
@@ -312,12 +326,14 @@ export class NewRuntimeModalBase extends Component {
     const {
       deleteDiskSelected, selectedPersistentDiskSize, viewMode, masterMachineType,
       masterDiskSize, sparkMode, numberOfWorkers, numberOfPreemptibleWorkers, workerMachineType,
-      workerDiskSize, jupyterUserScriptUri, selectedLeoImage, customEnvImage
+      workerDiskSize, gpuEnabled, gpuType, numGpus, jupyterUserScriptUri, selectedLeoImage,
+      customEnvImage, hasGpu
     } = this.state
     const { persistentDisk: existingPersistentDisk, runtime: existingRuntime } = this.getExistingEnvironmentConfig()
     const cloudService = sparkMode ? cloudServices.DATAPROC : cloudServices.GCE
     const desiredNumberOfWorkers = sparkMode === 'cluster' ? numberOfWorkers : 0
     return {
+      hasGpu,
       runtime: Utils.cond(
         [(viewMode !== 'deleteEnvironmentOptions'), () => {
           return {
@@ -326,6 +342,7 @@ export class NewRuntimeModalBase extends Component {
             ...(jupyterUserScriptUri && { jupyterUserScriptUri }),
             ...(cloudService === cloudServices.GCE ? {
               machineType: masterMachineType || defaultGceMachineType,
+              ...(gpuEnabled ? { gpuConfig: { gpuType, numOfGpus: numGpus } } : {}),
               bootDiskSize: existingRuntime?.bootDiskSize,
               ...(this.shouldUsePersistentDisk() ? {
                 persistentDiskAttached: true
@@ -356,17 +373,20 @@ export class NewRuntimeModalBase extends Component {
   }
 
   getExistingEnvironmentConfig() {
-    const { currentRuntimeDetails, currentPersistentDiskDetails } = this.state
+    const { currentRuntimeDetails, currentPersistentDiskDetails, hasGpu } = this.state
     const runtimeConfig = currentRuntimeDetails?.runtimeConfig
     const cloudService = runtimeConfig?.cloudService
     const numberOfWorkers = runtimeConfig?.numberOfWorkers || 0
+    const gpuConfig = runtimeConfig?.gpuConfig
     return {
+      hasGpu,
       runtime: currentRuntimeDetails ? {
         cloudService,
         toolDockerImage: this.getImageUrl(currentRuntimeDetails),
         ...(currentRuntimeDetails?.jupyterUserScriptUri && { jupyterUserScriptUri: currentRuntimeDetails?.jupyterUserScriptUri }),
         ...(cloudService === cloudServices.GCE ? {
           machineType: runtimeConfig.machineType || defaultGceMachineType,
+          ...(hasGpu && gpuConfig ? { gpuConfig } : {}),
           bootDiskSize: runtimeConfig.bootDiskSize,
           ...(runtimeConfig.persistentDiskId ? {
             persistentDiskAttached: true
@@ -606,9 +626,11 @@ export class NewRuntimeModalBase extends Component {
     )
 
     const renderActionButton = () => {
-      const { runtime: existingRuntime } = this.getExistingEnvironmentConfig()
+      const { runtime: existingRuntime, hasGpu } = this.getExistingEnvironmentConfig()
       const { runtime: desiredRuntime } = this.getDesiredEnvironmentConfig()
-      const commonButtonProps = { disabled: !this.hasChanges() || !!errors, tooltip: Utils.summarizeErrors(errors) }
+      const commonButtonProps = hasGpu && viewMode !== 'deleteEnvironmentOptions' ?
+        { disabled: true, tooltip: 'Cloud compute with GPU(s) cannot be updated. Please delete it and create a new one.' } :
+        { disabled: !this.hasChanges() || !!errors, tooltip: Utils.summarizeErrors(errors) }
       const canShowCustomImageWarning = viewMode === undefined
       const canShowEnvironmentWarning = _.includes(viewMode, [undefined, 'customImageWarning'])
       return Utils.cond(
@@ -751,43 +773,137 @@ export class NewRuntimeModalBase extends Component {
       div(['Version: ', version || null])
     ])
 
-    const renderRuntimeSection = () => {
-      const gridStyle = { display: 'grid', gridTemplateColumns: '0.75fr 4.5rem 1fr 5.5rem 1fr 5.5rem', gridGap: '0.8rem', alignItems: 'center' }
+    const renderCloudComputeProfileSection = computeExists => {
+      const { hasGpu, gpuEnabled, gpuType, numGpus } = this.state
+      const { cpu: currentNumCpus, memory: currentMemory } = findMachineType(mainMachineType)
+      const validGpuOptions = getValidGpuTypes(currentNumCpus, currentMemory)
+      const validGpuNames = _.flow(_.map('name'), _.uniq, _.sortBy('price'))(validGpuOptions)
+      const validGpuName = _.includes(displayNameForGpuType(gpuType), validGpuNames) ? displayNameForGpuType(gpuType) : _.head(validGpuNames)
+      const validNumGpusOptions = _.flow(_.filter({ name: validGpuName }), _.map('numGpus'))(validGpuOptions)
+      const validNumGpus = _.includes(numGpus, validNumGpusOptions) ? numGpus : _.head(validNumGpusOptions)
+      const gpuCheckboxDisabled = computeExists ? !gpuEnabled : sparkMode
+      const enableGpusSpan = span(['Enable GPUs ', versionTag('Beta', { color: colors.primary(1.5), backgroundColor: 'white', border: `1px solid ${colors.primary(1.5)}` })])
+      const gridStyle = { display: 'grid', gridGap: '1.3rem', alignItems: 'center', marginTop: '1rem' }
+
       return div({ style: { ...styles.whiteBoxContainer, marginTop: '1rem' } }, [
         div({ style: { fontSize: '0.875rem', fontWeight: 600 } }, ['Cloud compute profile']),
-        div({ style: { ...gridStyle, marginTop: '0.75rem' } }, [
-          h(MachineSelector, { value: mainMachineType, machineTypeOptions: validMachineTypes, onChange: v => this.setState({ masterMachineType: v }) }),
-          !isPersistentDisk ?
-            h(DiskSelector, { value: masterDiskSize, onChange: v => this.setState({ masterDiskSize: v }) }) :
-            div({ style: { gridColumnEnd: 'span 2' } }),
-          h(IdContainer, [
-            id => div({ style: { gridColumnEnd: 'span 6' } }, [
-              label({ htmlFor: id, style: styles.label }, ['Startup script']),
-              div({ style: { marginTop: '0.5rem' } }, [
-                h(TextInput, {
-                  id,
-                  placeholder: 'URI',
-                  value: jupyterUserScriptUri,
-                  onChange: v => this.setState({ jupyterUserScriptUri: v })
-                })
+        div([
+          div({ style: { ...gridStyle, gridTemplateColumns: '0.25fr 4.5rem 1fr 5.5rem 1fr 5rem' } }, [
+          // CPU & Memory Selection
+            h(IdContainer, [
+              id => h(Fragment, [
+                label({ htmlFor: id, style: styles.label }, ['CPUs']),
+                div([
+                  h(Select, {
+                    id,
+                    isSearchable: false,
+                    value: currentNumCpus,
+                    onChange: option => this.setState({ masterMachineType: _.find({ cpu: option.value }, validMachineTypes)?.name || mainMachineType }),
+                    options: _.flow(_.map('cpu'), _.union([currentNumCpus]), _.sortBy(_.identity))(validMachineTypes)
+                  })
+                ])
+              ])
+            ]),
+            h(IdContainer, [
+              id => h(Fragment, [
+                label({ htmlFor: id, style: styles.label }, ['Memory (GB)']),
+                div([
+                  h(Select, {
+                    id,
+                    isSearchable: false,
+                    value: currentMemory,
+                    onChange: option => this.setState({ masterMachineType: _.find({ cpu: currentNumCpus, memory: option.value }, validMachineTypes)?.name || mainMachineType }),
+                    options: _.flow(_.filter({ cpu: currentNumCpus }), _.map('memory'), _.union([currentMemory]), _.sortBy(_.identity))(validMachineTypes)
+                  })
+                ])
+              ])
+            ]),
+          // Disk Selection
+            !isPersistentDisk ?
+              h(DiskSelector, { value: masterDiskSize, onChange: v => this.setState({ masterDiskSize: v }) }) :
+              div({ style: { gridColumnEnd: 'span 2' } })
+          ]),
+          // GPU Enabling
+          !sparkMode && div({ style: { gridColumnEnd: 'span 6', marginTop: '1.5rem' } }, [
+            h(LabeledCheckbox, {
+              checked: gpuEnabled,
+              disabled: gpuCheckboxDisabled,
+              onChange: v => this.setState({ gpuEnabled: v || hasGpu })
+            }, [
+              span({ style: { marginLeft: '0.5rem', ...styles.label, verticalAlign: 'top' } }, [
+                gpuCheckboxDisabled ?
+                  h(TooltipTrigger, { content: ['GPUs can be added only to Standard VM compute at creation time.'], side: 'right' }, [enableGpusSpan]) :
+                  enableGpusSpan
+              ]),
+              h(Link, { style: { marginLeft: '1rem', verticalAlign: 'top' }, href: 'https://support.terra.bio/hc/en-us/articles/4403006001947', ...Utils.newTabLinkProps }, [
+                'Learn more about GPU cost and restrictions.',
+                icon('pop-out', { size: 12, style: { marginLeft: '0.25rem' } })
               ])
             ])
           ]),
-          h(IdContainer, [
-            id => div({ style: { gridColumnEnd: 'span 3' } }, [
-              label({ htmlFor: id, style: styles.label }, ['Compute type']),
-              div({ style: { marginTop: '0.5rem' } }, [
-                h(Select, {
-                  id,
-                  isSearchable: false,
-                  value: sparkMode,
-                  onChange: ({ value }) => this.setState({ sparkMode: value }),
-                  options: [
-                    { value: false, label: 'Standard VM', isDisabled: requiresSpark },
-                    { value: 'master', label: 'Spark master node' },
-                    { value: 'cluster', label: 'Spark cluster' }
-                  ]
-                })
+          // GPU Selection
+          gpuEnabled && !sparkMode && div({ style: { ...gridStyle, gridTemplateColumns: '0.75fr 12rem 1fr 5.5rem 1fr 5.5rem' } }, [
+            h(Fragment, [
+              h(IdContainer, [
+                id => h(Fragment, [
+                  label({ htmlFor: id, style: styles.label }, ['GPU type']),
+                  div({ style: { height: 45 } }, [
+                    h(Select, {
+                      id,
+                      isSearchable: false,
+                      value: validGpuName,
+                      onChange: option => this.setState({ gpuType: _.find({ name: option.value }, validGpuOptions)?.type }),
+                      options: validGpuNames
+                    })
+                  ])
+                ])
+              ]),
+              h(IdContainer, [
+                id => h(Fragment, [
+                  label({ htmlFor: id, style: styles.label }, ['GPUs']),
+                  div([
+                    h(Select, {
+                      id,
+                      isSearchable: false,
+                      value: validNumGpus,
+                      onChange: option => this.setState({ numGpus: _.find({ type: gpuType, numGpus: option.value }, validGpuOptions)?.numGpus }),
+                      options: validNumGpusOptions
+                    })
+                  ])
+                ])
+              ])
+            ])
+          ]),
+          div({ style: gridStyle }, [
+            h(IdContainer, [
+              id => div({ style: { gridColumnEnd: 'span 6', marginTop: '0.5rem' } }, [
+                label({ htmlFor: id, style: styles.label }, ['Startup script']),
+                div({ style: { marginTop: '0.5rem' } }, [
+                  h(TextInput, {
+                    id,
+                    placeholder: 'URI',
+                    value: jupyterUserScriptUri,
+                    onChange: v => this.setState({ jupyterUserScriptUri: v })
+                  })
+                ])
+              ])
+            ]),
+            h(IdContainer, [
+              id => div({ style: { gridColumnEnd: 'span 3', marginTop: '0.5rem' } }, [
+                label({ htmlFor: id, style: styles.label }, ['Compute type']),
+                div({ style: { marginTop: '0.5rem' } }, [
+                  h(Select, {
+                    id,
+                    isSearchable: false,
+                    value: sparkMode,
+                    onChange: ({ value }) => this.setState({ sparkMode: value }),
+                    options: [
+                      { value: false, label: 'Standard VM', isDisabled: requiresSpark },
+                      { value: 'master', label: 'Spark master node' },
+                      { value: 'cluster', label: 'Spark cluster' }
+                    ]
+                  })
+                ])
               ])
             ])
           ])
@@ -795,7 +911,7 @@ export class NewRuntimeModalBase extends Component {
         sparkMode === 'cluster' && fieldset({ style: { margin: '1.5rem 0 0', border: 'none', padding: 0 } }, [
           legend({ style: { padding: 0, ...styles.label } }, ['Worker config']),
           // grid styling in a div because of display issues in chrome: https://bugs.chromium.org/p/chromium/issues/detail?id=375693
-          div({ style: { ...gridStyle, marginTop: '0.75rem' } }, [
+          div({ style: { ...gridStyle, gridTemplateColumns: '0.75fr 4.5rem 1fr 5rem 1fr 5rem', marginTop: '0.75rem' } }, [
             h(IdContainer, [
               id => h(Fragment, [
                 label({ htmlFor: id, style: styles.label }, ['Workers']),
@@ -829,7 +945,7 @@ export class NewRuntimeModalBase extends Component {
               ])
             ]),
             div({ style: { gridColumnEnd: 'span 2' } }),
-            h(MachineSelector, { value: workerMachineType, machineTypeOptions: validMachineTypes, onChange: v => this.setState({ workerMachineType: v }) }),
+            h(WorkerSelector, { value: workerMachineType, machineTypeOptions: validMachineTypes, onChange: v => this.setState({ workerMachineType: v }) }),
             h(DiskSelector, { value: workerDiskSize, onChange: v => this.setState({ workerDiskSize: v }) })
           ])
         ])
@@ -1101,7 +1217,7 @@ export class NewRuntimeModalBase extends Component {
           ]),
           div({ style: { padding: '1.5rem', overflowY: 'auto', flex: 'auto' } }, [
             renderApplicationSection(),
-            renderRuntimeSection(),
+            renderCloudComputeProfileSection(existingRuntime),
             !!isPersistentDisk && renderPersistentDiskSection(),
             !sparkMode && !isPersistentDisk && div({ style: { ...styles.whiteBoxContainer, marginTop: '1rem' } }, [
               div([

@@ -168,7 +168,7 @@ export const NewGalaxyModalBase = Utils.withDisplayName('NewGalaxyModal')(
           div({ style: { flex: '1', lineHeight: '1.5rem', minWidth: 0, display: 'flex' } }, [
             span({ style: { marginRight: '0.5rem', marginTop: '0.5rem' } }, [icon('clockSolid', { size: 25, color: colors.accent() })]),
             div([
-              div({ style: { ...styles.headerText, marginTop: '0.5rem' } }, ['Set up duration']),
+              div({ style: { ...styles.headerText, marginTop: '0.5rem' } }, ['Setup duration']),
               div({ style: { lineHeight: 1.5 } }, [
                 div(['Creating a cloud environment for Galaxy takes ', span({ style: { fontWeight: 600 } }, ['8-10 minutes.'])]),
                 div(['You can navigate away, and we will notify you when it\'s ready. '])
@@ -180,18 +180,12 @@ export const NewGalaxyModalBase = Utils.withDisplayName('NewGalaxyModal')(
             div([
               div({ style: { ...styles.headerText, marginTop: '0.5rem' } }, ['Continuation cost']),
               div({ style: { lineHeight: 1.5 } }, [
-                div(['Please delete the cloud environment when finished; it will']),
-                div(['continue to ', span({ style: { fontWeight: 600 } }, ['incur charges ']), 'if it keeps running.'])
-              ])
-            ])
-          ]),
-          div({ style: { flex: '1', lineHeight: '1.5rem', minWidth: 0, display: 'flex' } }, [
-            span({ style: { marginRight: '0.5rem', marginTop: '0.5rem' } }, [icon('pause', { size: 25, color: colors.accent() })]),
-            div([
-              div({ style: { ...styles.headerText, marginTop: '0.5rem' } }, ['Pause and auto-pause']),
-              div({ style: { lineHeight: 1.5 } }, [
-                div(['You can pause  during the compute, but it will auto-pause when']),
-                div(['the instance is idle more than 1 hour if the analysis is done.'])
+                div(['Please pause or delete the cloud environment when finished; it will']),
+                div(['continue to ', span({ style: { fontWeight: 600 } }, ['incur charges ']), 'if it keeps running. Please see the subsection']),
+                h(Link, { href: 'https://support.terra.bio/hc/en-us/articles/360050566271', ...Utils.newTabLinkProps }, [
+                  'Pausing/Resuming a Galaxy instance.',
+                  icon('pop-out', { size: 12, style: { marginTop: '0.5rem', marginLeft: '0.25rem' } })
+                ])
               ])
             ])
           ]),
@@ -201,8 +195,8 @@ export const NewGalaxyModalBase = Utils.withDisplayName('NewGalaxyModal')(
               div({ style: { ...styles.headerText, marginTop: '0.5rem' } }, ['Environment updates']),
               div({ style: { lineHeight: 1.5 } }, [
                 div(['If you would like to update your compute or disk configuration']),
-                div(['after an app is created, please delete the app and create a new']),
-                div(['app with the desired configuration.'])
+                div(['after an environment is created, please delete the environment and']),
+                div(['create a new environment with the desired configuration.'])
               ])
             ])
           ])
