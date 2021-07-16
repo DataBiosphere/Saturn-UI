@@ -21,10 +21,10 @@ import * as Nav from 'src/libs/nav'
 import { clearNotification, notify } from 'src/libs/notifications'
 import {
   appIsSettingUp,
-  collapsedRuntimeStatus,
-  convertedAppStatus,
-  currentApp,
-  currentRuntime,
+  getConvertedAppStatus,
+  getConvertedRuntimeStatus,
+  getCurrentApp,
+  getCurrentRuntime,
   persistentDiskCost,
   runtimeCost,
   trimRuntimesOldestFirst
@@ -192,8 +192,8 @@ export default class RuntimeManager extends PureComponent {
     const createdDate = new Date(runtime.createdDate)
     const dateNotified = getDynamic(sessionStorage, `notifiedOutdatedRuntime${runtime.id}`) || {}
     const rStudioLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name, application: 'RStudio' })
-    const app = currentApp(apps)
-    const prevApp = currentApp(prevProps.apps)
+    const app = getCurrentApp(apps)
+    const prevApp = getCurrentApp(prevProps.apps)
 
     if (runtime.status === 'Error' && prevRuntime.status !== 'Error' && !_.includes(runtime.id, errorNotifiedRuntimes.get())) {
       notify('error', 'Error Creating Cloud Environment', {
@@ -251,7 +251,7 @@ export default class RuntimeManager extends PureComponent {
 
   getCurrentRuntime() {
     const { runtimes } = this.props
-    return currentRuntime(runtimes)
+    return getCurrentRuntime(runtimes)
   }
 
   async executeAndRefresh(promise) {
@@ -288,7 +288,7 @@ export default class RuntimeManager extends PureComponent {
       return null
     }
     const currentRuntime = this.getCurrentRuntime()
-    const currentStatus = collapsedRuntimeStatus(currentRuntime)
+    const currentStatus = getConvertedRuntimeStatus(currentRuntime)
 
     const renderIcon = () => {
       switch (currentStatus) {
@@ -336,14 +336,14 @@ export default class RuntimeManager extends PureComponent {
     const totalCost = _.sum(_.map(runtimeCost, runtimes)) + _.sum(_.map(persistentDiskCost, persistentDisks))
     const activeRuntimes = this.getActiveRuntimesOldestFirst()
     const activeDisks = _.remove({ status: 'Deleting' }, persistentDisks)
-    const { Creating: creating, Updating: updating, LeoReconfiguring: reconfiguring } = _.countBy(collapsedRuntimeStatus, activeRuntimes)
+    const { Creating: creating, Updating: updating, LeoReconfiguring: reconfiguring } = _.countBy(getConvertedRuntimeStatus, activeRuntimes)
     const isDisabled = !canCompute || creating || busy || updating || reconfiguring
 
     const isRStudioImage = currentRuntime?.labels.tool === 'RStudio'
     const applicationName = isRStudioImage ? 'RStudio' : 'terminal'
     const applicationLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name, application: applicationName })
 
-    const app = currentApp(apps)
+    const app = getCurrentApp(apps)
 
     return h(Fragment, [
       app && div({ style: { ...styles.container, borderRadius: 5, marginRight: '1.5rem' } }, [
@@ -360,7 +360,7 @@ export default class RuntimeManager extends PureComponent {
           img({ src: galaxyLogo, alt: '', style: { marginRight: '0.25rem' } }),
           div([
             div({ style: { fontSize: 12, fontWeight: 'bold' } }, ['Galaxy']),
-            div({ style: { fontSize: 10 } }, [convertedAppStatus(app.status)])
+            div({ style: { fontSize: 10 } }, [getConvertedAppStatus(app.status)])
           ])
         ])
       ]),
