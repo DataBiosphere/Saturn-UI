@@ -157,15 +157,15 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
   })
 
   const renderStatusClickable = toolLabel => Utils.cond(
-    [toolLabel === currentRuntimeTool, () => getIconFromRuntimeStatus(toolLabel, currentRuntimeStatus)],
+    [toolLabel === currentRuntimeTool, () => getIconFromStatus(toolLabel, currentRuntimeStatus)],
     [toolLabel === tools.galaxy.label, () => {
       const normalizedAppStatus = _.capitalize(currentApp?.status)
-      return getIconFromRuntimeStatus(toolLabel, normalizedAppStatus)
+      return getIconFromStatus(toolLabel, normalizedAppStatus)
     }],
     [Utils.DEFAULT, () => defaultIcon(toolLabel)]
   )
 
-  const getIconFromRuntimeStatus = (toolLabel, status) => {
+  const getIconFromStatus = (toolLabel, status) => {
     // We dont use Utils.switchCase here to support the 'fallthrough' functionality
     switch (status) {
       case 'Stopped':
@@ -332,13 +332,13 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
             tooltipDelay: 100,
             onClick: () => setViewMode(toolLabel)
           }, [
-            icon('cloudBolt', { size: 20 }),
+            icon('cloudBolt', { size: 20 }), //TODO: why doesn't this icon disable properly color-wise?
             span('Cloud'),
             span('Environment')
           ]),
           // Status button with stop/start functionality
           renderStatusClickable(toolLabel),
-          // Launch button
+          // Launch
           h(Clickable, { ...getToolLaunchClickableProps(toolLabel) }, [
             icon('rocket', { size: 20 }),
             span('Launch'),

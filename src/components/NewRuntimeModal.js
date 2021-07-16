@@ -588,9 +588,6 @@ export class NewRuntimeModalBase extends Component {
 
     const isCustomImage = selectedLeoImage === CUSTOM_MODE
 
-    console.log('selectedImage')
-    console.dir(leoImages)
-
     const minRequiredMemory = sparkMode ? 7.5 : 3.75
     const validMachineTypes = _.filter(({ memory }) => memory >= minRequiredMemory, machineTypes)
     const mainMachineType = _.find({ name: masterMachineType }, validMachineTypes)?.name || getDefaultMachineType(sparkMode)

@@ -102,7 +102,6 @@ const WorkspaceContainer = ({ namespace, name, breadcrumbs, topBarContent, title
   const [sharingWorkspace, setSharingWorkspace] = useState(false)
   const isOwner = workspace && Utils.isOwner(workspace.accessLevel)
 
-  console.log(`activeTab ${activeTab}`)
   const canShare = !!workspace?.canShare
 
   return h(FooterWrapper, [
