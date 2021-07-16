@@ -9,6 +9,7 @@ import { ButtonPrimary, ButtonSecondary, Clickable, LabeledCheckbox, Link, spinn
 import { icon } from 'src/components/icons'
 import Modal from 'src/components/Modal'
 import { NewRuntimeModal } from 'src/components/NewRuntimeModal'
+import { CloudComputeModal } from 'src/components/CloudComputeModal'
 import { findPotentialNotebookLockers, NotebookDuplicator, notebookLockHash } from 'src/components/notebook-utils'
 import { makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
 import { ApplicationHeader, PlaygroundHeader, RuntimeKicker, RuntimeStatusMonitor, StatusMessage } from 'src/components/runtime-common'
@@ -61,7 +62,24 @@ const NotebookLauncher = _.flow(
         ]),
       mode && h(RuntimeKicker, { runtime, refreshRuntimes, onNullRuntime: () => setCreateOpen(true) }),
       mode && h(RuntimeStatusMonitor, { runtime, onRuntimeStoppedRunning: () => chooseMode(undefined) }),
-      h(NewRuntimeModal, {
+      // h(NewRuntimeModal, {
+      //   isOpen: createOpen,
+      //   workspace,
+      //   runtimes,
+      //   persistentDisks,
+      //   onDismiss: () => {
+      //     chooseMode(undefined)
+      //     setCreateOpen(false)
+      //   },
+      //   onSuccess: _.flow(
+      //     withErrorReporting('Error creating runtime'),
+      //     Utils.withBusyState(setBusy)
+      //   )(async () => {
+      //     setCreateOpen(false)
+      //     await refreshRuntimes(true)
+      //   })
+      // }),
+      h(CloudComputeModal, {
         isOpen: createOpen,
         workspace,
         runtimes,

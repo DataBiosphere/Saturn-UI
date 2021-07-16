@@ -5,6 +5,7 @@ import { spinnerOverlay } from 'src/components/common'
 import ModalDrawer from 'src/components/ModalDrawer'
 import { NewGalaxyModalBase } from 'src/components/NewGalaxyModal'
 import { NewRuntimeModalBase } from 'src/components/NewRuntimeModal'
+import { CloudComputeModalBase } from 'src/components/CloudComputeModal'
 import { tools } from 'src/components/notebook-utils'
 import TitleBar from 'src/components/TitleBar'
 import galaxyLogo from 'src/images/galaxy-logo.png'
@@ -23,6 +24,7 @@ export const NewAnalysisModal = Utils.withDisplayName('NewAnalysisModal')(
     const [viewMode, setViewMode] = useState(undefined)
     const [busy, setBusy] = useState()
 
+    // TODO Replace reference to NewRuntimeModalBase with CloudComputeModalBase
     const renderNewRuntimeModal = tool => h(NewRuntimeModalBase, {
       isOpen: true, //always true, this is detached from dom for other viewmodes within this modal
       isAnalysisMode: true,
