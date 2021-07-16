@@ -2,7 +2,7 @@ import { addDays, parseJSON } from 'date-fns/fp'
 import _ from 'lodash/fp'
 import * as qs from 'qs'
 import { Fragment, useState } from 'react'
-import { div, h, h2, h3, label, span } from 'react-hyperscript-helpers'
+import { div, h, h2, h3, span } from 'react-hyperscript-helpers'
 import {
   ButtonPrimary, FrameworkServiceLink, IdContainer, LabeledCheckbox, Link, RadioButton, ShibbolethLink, spinnerOverlay, UnlinkFenceAccount
 } from 'src/components/common'
@@ -249,23 +249,20 @@ const Profile = ({ queryParams = {} }) => {
 
   const line = children => div({ style: styles.form.line }, children)
 
-  const textField = (key, title, { placeholder, required } = {}) => h(IdContainer, [id => div({ style: styles.form.container }, [
-    label({ htmlFor: id, style: styles.form.title }, [title]),
+  const textField = (key, title, { required } = {}) => h(IdContainer, [id => div({ style: styles.form.container }, [
     required ?
       h(ValidatedInput, {
         inputProps: {
           id,
           value: profileInfo[key],
-          onChange: assignValue(key),
-          placeholder: placeholder || 'Required'
+          onChange: assignValue(key)
         },
         error: Utils.summarizeErrors(errors && errors[key])
       }) :
       h(TextInput, {
         id,
         value: profileInfo[key],
-        onChange: assignValue(key),
-        placeholder
+        onChange: assignValue(key)
       })
   ])])
 
