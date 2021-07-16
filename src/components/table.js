@@ -632,13 +632,15 @@ export const Sortable = ({ sort, field, onSort, children }) => {
 }
 
 export const MiniSortable = ({ sort, field, onSort, children }) => {
+  const cursor = sort ? 'pointer' : 'default'
   return h(IdContainer, [id => h(Clickable, {
-    style: { display: 'flex', alignItems: 'center', cursor: 'pointer', height: '100%' },
+    style: { display: 'flex', alignItems: 'center', cursor, height: '100%' },
+    disabled: !sort,
     onClick: () => onSort(Utils.nextSort(sort, field)),
     'aria-describedby': id
   }, [
     children,
-    sort.field === field && div({
+    sort?.field === field && div({
       style: { color: colors.accent(), marginLeft: '1rem' }
     }, [
       icon(sort.direction === 'asc' ? 'long-arrow-alt-down' : 'long-arrow-alt-up')

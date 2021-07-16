@@ -3,10 +3,12 @@ import { Fragment, useImperativeHandle, useRef, useState } from 'react'
 import { div, h, span, table, tbody, td, tr } from 'react-hyperscript-helpers'
 import { AutoSizer } from 'react-virtualized'
 import * as breadcrumbs from 'src/components/breadcrumbs'
-import { ButtonPrimary, Clickable, HeaderRenderer, Link, spinnerOverlay } from 'src/components/common'
+import { Clickable, HeaderRenderer, Link, spinnerOverlay } from 'src/components/common'
+import { icon } from 'src/components/icons'
 import { DelayedSearchInput } from 'src/components/input'
 import { collapseStatus, failedIcon, runningIcon, submittedIcon, successIcon } from 'src/components/job-common'
 import Modal from 'src/components/Modal'
+import { MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
 import { FlexTable, TextCell, TooltipCell } from 'src/components/table'
 import TooltipTrigger from 'src/components/TooltipTrigger'
 import { Ajax } from 'src/libs/ajax'
@@ -153,7 +155,15 @@ const JobHistory = _.flow(
     }
   })
 
-  const makeHeaderRenderer = (name, label) => () => h(HeaderRenderer, { sort, name, label, onSort: setSort })
+  const makeHeaderRenderer = (name, label, sortable = true) => {
+    return () => h(HeaderRenderer, {
+      sort: sortable ? sort : undefined,
+      name,
+      label,
+      onSort: setSort,
+      style: { fontWeight: 400 }
+    })
+  }
 
 
   // Lifecycle
@@ -264,7 +274,7 @@ const JobHistory = _.flow(
             },
             {
               size: { basis: 170, grow: 0 },
-              headerRenderer: makeHeaderRenderer('numberOfWorkflows', 'Number of Workflows'),
+              headerRenderer: makeHeaderRenderer('numberOfWorkflows', 'No. of Workflows'),
               cellRenderer: ({ rowIndex }) => {
                 const { workflowStatuses } = sortedSubmissions[rowIndex]
                 return h(TextCell, Utils.formatNumber(_.sum(_.values(workflowStatuses))))
@@ -279,42 +289,19 @@ const JobHistory = _.flow(
               }
             },
             {
-              size: { min: 220, max: 220 },
-              headerRenderer: makeHeaderRenderer('actions'),
+              size: { basis: 170, grow: 0 },
+              headerRenderer: makeHeaderRenderer('submissionDate', 'Submitted'),
               cellRenderer: ({ rowIndex }) => {
-                const {
-                  methodConfigurationNamespace, methodConfigurationName, methodConfigurationDeleted, submissionId, workflowStatuses,
-                  status, submissionEntity
-                } = sortedSubmissions[rowIndex]
-                return h(Fragment, [
-                  (!isTerminal(status) && status !== 'Aborting') && h(ButtonPrimary, {
-                    onClick: () => setAbortingId(submissionId)
-                  }, ['Abort workflows']),
-                  isTerminal(status) && (workflowStatuses['Failed'] || workflowStatuses['Aborted']) &&
-                  submissionEntity && !methodConfigurationDeleted && h(ButtonPrimary, {
-                    onClick: () => rerunFailures({
-                      workspace,
-                      submissionId,
-                      configNamespace: methodConfigurationNamespace,
-                      configName: methodConfigurationName,
-                      onDone: refresh
-                    })
-                  }, ['Relaunch failures'])
+                const { submissionDate } = sortedSubmissions[rowIndex]
+                const dateParts = Utils.makeCompleteDateParts(submissionDate)
+                return div([
+                  div([dateParts[0]]),
+                  div([dateParts[1]])
                 ])
               }
             },
             {
-              size: { basis: 150, grow: 0 },
-              // headerRenderer: () => h(HeaderCell, ['Submitted']),
-              headerRenderer: makeHeaderRenderer('submissionDate'),
-              cellRenderer: ({ rowIndex }) => {
-                const { submissionDate } = sortedSubmissions[rowIndex]
-                return h(TooltipCell, { tooltip: Utils.makeCompleteDate(submissionDate) }, [Utils.makeCompleteDate(submissionDate)])
-              }
-            },
-            {
-              size: { basis: 150, grow: 1 },
-              // headerRenderer: () => h(HeaderCell, ['Submission ID']),
+              size: { basis: 210, grow: 1 },
               headerRenderer: makeHeaderRenderer('submissionId', 'Submission ID'),
               cellRenderer: ({ rowIndex }) => {
                 const { submissionId } = sortedSubmissions[rowIndex]
@@ -323,6 +310,43 @@ const JobHistory = _.flow(
                     ...Utils.newTabLinkProps,
                     href: bucketBrowserUrl(`${bucketName}/${submissionId}`)
                   }, [submissionId])
+                ])
+              }
+            },
+            {
+              size: { min: 90, max: 90 },
+              headerRenderer: makeHeaderRenderer('actions', 'Actions', false),
+              cellRenderer: ({ rowIndex }) => {
+                const {
+                  methodConfigurationNamespace, methodConfigurationName, methodConfigurationDeleted, submissionId, workflowStatuses,
+                  status, submissionEntity
+                } = sortedSubmissions[rowIndex]
+                const canAbort = !isTerminal(status) && status !== 'Aborting'
+                const canRelaunch = isTerminal(status) && (workflowStatuses['Failed'] || workflowStatuses['Aborted']) &&
+                  submissionEntity && !methodConfigurationDeleted
+                return div({ style: { width: '100%', textAlign: 'center' } }, [
+                  h(MenuTrigger, {
+                    closeOnClick: true,
+                    content: h(Fragment, [
+                      h(MenuButton, {
+                        disabled: !canAbort,
+                        onClick: () => setAbortingId(submissionId)
+                      }, ['Abort workflows']),
+                      h(MenuButton, {
+                        disabled: !canRelaunch,
+                        onClick: () => rerunFailures({
+                          workspace,
+                          submissionId,
+                          configNamespace: methodConfigurationNamespace,
+                          configName: methodConfigurationName,
+                          onDone: refresh
+                        })
+                      }, ['Relaunch failures'])
+                    ]),
+                    side: 'bottom'
+                  }, [
+                    h(Clickable, { 'aria-label': 'Workspace menu' }, [icon('cardMenuIcon', { size: 27 })])
+                  ])
                 ])
               }
             }
