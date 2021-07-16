@@ -79,6 +79,10 @@ export const connectStore = (theStore, name) => WrappedComponent => {
 const dateFormat = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: 'numeric' })
 const monthYearFormat = new Intl.DateTimeFormat('default', { month: 'short', year: 'numeric' })
 const completeDateFormat = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: 'numeric' })
+const completeDateFormatParts = [
+  new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: 'numeric' }),
+  new Intl.DateTimeFormat('default', { hour: 'numeric', minute: 'numeric' })
+]
 
 export const makePrettyDate = dateString => {
   const date = new Date(dateString)
@@ -94,6 +98,11 @@ export const makePrettyDate = dateString => {
 export const makeStandardDate = dateString => dateFormat.format(new Date(dateString))
 
 export const makeCompleteDate = dateString => completeDateFormat.format(new Date(dateString))
+
+export const makeCompleteDateParts = dateString => {
+  const date = new Date(dateString)
+  return _.map(part => part.format(date), completeDateFormatParts)
+}
 
 const usdFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 export const formatUSD = v => cond(

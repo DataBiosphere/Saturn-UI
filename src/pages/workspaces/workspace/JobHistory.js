@@ -3,11 +3,13 @@ import { Fragment, useImperativeHandle, useRef, useState } from 'react'
 import { div, h, span, table, tbody, td, tr } from 'react-hyperscript-helpers'
 import { AutoSizer } from 'react-virtualized'
 import * as breadcrumbs from 'src/components/breadcrumbs'
-import { ButtonPrimary, Clickable, Link, spinnerOverlay } from 'src/components/common'
+import { Clickable, HeaderRenderer, Link, spinnerOverlay } from 'src/components/common'
+import { icon } from 'src/components/icons'
 import { DelayedSearchInput } from 'src/components/input'
 import { collapseStatus, failedIcon, runningIcon, submittedIcon, successIcon } from 'src/components/job-common'
 import Modal from 'src/components/Modal'
-import { FlexTable, HeaderCell, TextCell, TooltipCell } from 'src/components/table'
+import { MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
+import { FlexTable, TextCell, TooltipCell } from 'src/components/table'
 import TooltipTrigger from 'src/components/TooltipTrigger'
 import { Ajax } from 'src/libs/ajax'
 import { bucketBrowserUrl } from 'src/libs/auth'
@@ -118,6 +120,7 @@ const JobHistory = _.flow(
   const [loading, setLoading] = useState(false)
   const [abortingId, setAbortingId] = useState(undefined)
   const [textFilter, setTextFilter] = useState('')
+  const [sort, setSort] = useState({ field: 'submissionDate', direction: 'desc' })
 
   const scheduledRefresh = useRef()
   const signal = Utils.useCancellation()
@@ -152,6 +155,16 @@ const JobHistory = _.flow(
     }
   })
 
+  const makeHeaderRenderer = (name, label, sortable = true) => {
+    return () => h(HeaderRenderer, {
+      sort: sortable ? sort : undefined,
+      name,
+      label,
+      onSort: setSort,
+      style: { fontWeight: 400 }
+    })
+  }
+
 
   // Lifecycle
   Utils.useOnMount(() => {
@@ -169,6 +182,20 @@ const JobHistory = _.flow(
 
   // Render
   const filteredSubmissions = _.filter(({ asText }) => _.every(term => asText.includes(term.toLowerCase()), textFilter.split(/\s+/)), submissions)
+
+  const sortedSubmissions = _.orderBy(
+    Utils.cond(
+      [sort.field === 'entityName', ['submissionEntity.entityName']],
+      [sort.field === 'numberOfWorkflows', [s => _.sum(_.values(s.workflowStatuses))]],
+      [sort.field === 'status', [s => {
+        const { succeeded, failed, running, submitted } = collapsedStatuses(s.workflowStatuses)
+        return [submitted, running, failed, succeeded]
+      }]],
+      sort.field
+    ),
+    [sort.direction],
+    filteredSubmissions)
+
   const hasJobs = !_.isEmpty(submissions)
   const { running, submitted } = !!abortingId ? collapsedStatuses(_.find({ submissionId: abortingId }, filteredSubmissions).workflowStatuses) : {}
 
@@ -187,17 +214,18 @@ const JobHistory = _.flow(
       hasJobs && h(AutoSizer, [
         ({ width, height }) => h(FlexTable, {
           'aria-label': 'job history',
-          width, height, rowCount: filteredSubmissions.length,
+          width, height, rowCount: sortedSubmissions.length,
           hoverHighlight: true,
           noContentMessage: 'No matching jobs',
+          sort,
           columns: [
             {
               size: { basis: 500, grow: 0 },
-              headerRenderer: () => h(HeaderCell, ['Submission (click for details)']),
+              headerRenderer: makeHeaderRenderer('methodConfigurationName', 'Submission (click for details)'),
               cellRenderer: ({ rowIndex }) => {
                 const {
                   methodConfigurationNamespace, methodConfigurationName, submitter, submissionId, workflowStatuses
-                } = filteredSubmissions[rowIndex]
+                } = sortedSubmissions[rowIndex]
                 const { failed, running, submitted } = collapsedStatuses(workflowStatuses)
 
                 return h(Clickable, {
@@ -238,71 +266,87 @@ const JobHistory = _.flow(
             },
             {
               size: { basis: 250, grow: 0 },
-              headerRenderer: () => h(HeaderCell, ['Data entity']),
+              headerRenderer: makeHeaderRenderer('entityName', 'Data entity'),
               cellRenderer: ({ rowIndex }) => {
-                const { submissionEntity: { entityName, entityType } = {} } = filteredSubmissions[rowIndex]
+                const { submissionEntity: { entityName, entityType } = {} } = sortedSubmissions[rowIndex]
                 return h(TooltipCell, [entityName && `${entityName} (${entityType})`])
               }
             },
             {
               size: { basis: 170, grow: 0 },
-              headerRenderer: () => h(HeaderCell, ['No. of Workflows']),
+              headerRenderer: makeHeaderRenderer('numberOfWorkflows', 'No. of Workflows'),
               cellRenderer: ({ rowIndex }) => {
-                const { workflowStatuses } = filteredSubmissions[rowIndex]
+                const { workflowStatuses } = sortedSubmissions[rowIndex]
                 return h(TextCell, Utils.formatNumber(_.sum(_.values(workflowStatuses))))
               }
             },
             {
               size: { basis: 150, grow: 0 },
-              headerRenderer: () => h(HeaderCell, ['Status']),
+              headerRenderer: makeHeaderRenderer('status'),
               cellRenderer: ({ rowIndex }) => {
-                const { workflowStatuses, status } = filteredSubmissions[rowIndex]
+                const { workflowStatuses, status } = sortedSubmissions[rowIndex]
                 return statusCell(workflowStatuses, status)
               }
             },
             {
-              size: { min: 220, max: 220 },
-              headerRenderer: () => h(HeaderCell, ['Actions']),
+              size: { basis: 170, grow: 0 },
+              headerRenderer: makeHeaderRenderer('submissionDate', 'Submitted'),
               cellRenderer: ({ rowIndex }) => {
-                const {
-                  methodConfigurationNamespace, methodConfigurationName, methodConfigurationDeleted, submissionId, workflowStatuses,
-                  status, submissionEntity
-                } = filteredSubmissions[rowIndex]
-                return h(Fragment, [
-                  (!isTerminal(status) && status !== 'Aborting') && h(ButtonPrimary, {
-                    onClick: () => setAbortingId(submissionId)
-                  }, ['Abort workflows']),
-                  isTerminal(status) && (workflowStatuses['Failed'] || workflowStatuses['Aborted']) &&
-                  submissionEntity && !methodConfigurationDeleted && h(ButtonPrimary, {
-                    onClick: () => rerunFailures({
-                      workspace,
-                      submissionId,
-                      configNamespace: methodConfigurationNamespace,
-                      configName: methodConfigurationName,
-                      onDone: refresh
-                    })
-                  }, ['Relaunch failures'])
+                const { submissionDate } = sortedSubmissions[rowIndex]
+                const dateParts = Utils.makeCompleteDateParts(submissionDate)
+                return div([
+                  div([dateParts[0]]),
+                  div([dateParts[1]])
                 ])
               }
             },
             {
-              size: { basis: 150, grow: 0 },
-              headerRenderer: () => h(HeaderCell, ['Submitted']),
+              size: { basis: 210, grow: 1 },
+              headerRenderer: makeHeaderRenderer('submissionId', 'Submission ID'),
               cellRenderer: ({ rowIndex }) => {
-                const { submissionDate } = filteredSubmissions[rowIndex]
-                return h(TooltipCell, { tooltip: Utils.makeCompleteDate(submissionDate) }, [Utils.makeCompleteDate(submissionDate)])
-              }
-            },
-            {
-              size: { basis: 150, grow: 1 },
-              headerRenderer: () => h(HeaderCell, ['Submission ID']),
-              cellRenderer: ({ rowIndex }) => {
-                const { submissionId } = filteredSubmissions[rowIndex]
+                const { submissionId } = sortedSubmissions[rowIndex]
                 return h(TooltipCell, { tooltip: submissionId }, [
                   h(Link, {
                     ...Utils.newTabLinkProps,
                     href: bucketBrowserUrl(`${bucketName}/${submissionId}`)
                   }, [submissionId])
+                ])
+              }
+            },
+            {
+              size: { min: 90, max: 90 },
+              headerRenderer: makeHeaderRenderer('actions', 'Actions', false),
+              cellRenderer: ({ rowIndex }) => {
+                const {
+                  methodConfigurationNamespace, methodConfigurationName, methodConfigurationDeleted, submissionId, workflowStatuses,
+                  status, submissionEntity
+                } = sortedSubmissions[rowIndex]
+                const canAbort = !isTerminal(status) && status !== 'Aborting'
+                const canRelaunch = isTerminal(status) && (workflowStatuses['Failed'] || workflowStatuses['Aborted']) &&
+                  submissionEntity && !methodConfigurationDeleted
+                return div({ style: { width: '100%', textAlign: 'center' } }, [
+                  h(MenuTrigger, {
+                    closeOnClick: true,
+                    content: h(Fragment, [
+                      h(MenuButton, {
+                        disabled: !canAbort,
+                        onClick: () => setAbortingId(submissionId)
+                      }, ['Abort workflows']),
+                      h(MenuButton, {
+                        disabled: !canRelaunch,
+                        onClick: () => rerunFailures({
+                          workspace,
+                          submissionId,
+                          configNamespace: methodConfigurationNamespace,
+                          configName: methodConfigurationName,
+                          onDone: refresh
+                        })
+                      }, ['Relaunch failures'])
+                    ]),
+                    side: 'bottom'
+                  }, [
+                    h(Clickable, { 'aria-label': 'Workspace menu' }, [icon('cardMenuIcon', { size: 27 })])
+                  ])
                 ])
               }
             }
