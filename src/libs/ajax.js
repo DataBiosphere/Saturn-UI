@@ -930,6 +930,11 @@ const Buckets = signal => ({
     return res.json()
   },
 
+  getShowcaseWorkspaces: async () => {
+    const res = await fetchOk(`${getConfig().firecloudBucketRoot}/showcase.json`, { signal })
+    return res.json()
+  },
+
   listNotebooks: async (namespace, name) => {
     const res = await fetchBuckets(
       `storage/v1/b/${name}/o?prefix=notebooks/`,

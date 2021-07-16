@@ -3,14 +3,14 @@ import { Clickable } from 'src/components/common'
 import * as Utils from 'src/libs/utils'
 
 
-const SignInButton = (props = {}) => {
+const SignInButton = (props = { theme: 'light' }) => {
   Utils.useOnMount(() => {
     window.gapi.signin2.render('signInButton', {
       scope: 'openid profile email',
       width: 250,
       height: 56,
       longtitle: true,
-      theme: 'light',
+      theme: props.theme,
       prompt: 'select_account'
     })
   })
