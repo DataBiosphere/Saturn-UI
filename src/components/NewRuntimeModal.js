@@ -17,7 +17,7 @@ import colors from 'src/libs/colors'
 import { withErrorReporting } from 'src/libs/error'
 import Events, { extractWorkspaceDetails } from 'src/libs/events'
 import {
-  getCurrentRuntime, DEFAULT_DISK_SIZE, defaultDataprocMachineType, defaultGceMachineType, findMachineType, getDefaultMachineType,
+  DEFAULT_DISK_SIZE, defaultDataprocMachineType, defaultGceMachineType, findMachineType, getCurrentRuntime, getDefaultMachineType,
   persistentDiskCostMonthly,
   RadioBlock,
   runtimeConfigBaseCost, runtimeConfigCost

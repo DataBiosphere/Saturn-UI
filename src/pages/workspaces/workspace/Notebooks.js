@@ -22,12 +22,9 @@ import * as Nav from 'src/libs/nav'
 import { notify } from 'src/libs/notifications'
 import {
   appIsSettingUp,
-  getConvertedAppStatus,
   getCurrentApp,
-  currentAttachedDataDisk,
-  getGalaxyCost,
-  isCurrentGalaxyDiskDetaching,
-  getGalaxyCostTextChildren
+  getGalaxyCostTextChildren,
+  isCurrentGalaxyDiskDetaching
 } from 'src/libs/runtime-utils'
 import { authStore } from 'src/libs/state'
 import * as StateHistory from 'src/libs/state-history'

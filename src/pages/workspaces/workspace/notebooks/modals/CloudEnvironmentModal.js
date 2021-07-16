@@ -1,7 +1,7 @@
 import _ from 'lodash/fp'
 import { Fragment, useState } from 'react'
 import { div, h, hr, img, span } from 'react-hyperscript-helpers'
-import { ButtonPrimary, Clickable, spinnerOverlay } from 'src/components/common'
+import { Clickable, spinnerOverlay } from 'src/components/common'
 import { icon } from 'src/components/icons'
 import ModalDrawer from 'src/components/ModalDrawer'
 import { NewGalaxyModalBase } from 'src/components/NewGalaxyModal'
@@ -16,17 +16,21 @@ import { Ajax } from 'src/libs/ajax'
 import colors from 'src/libs/colors'
 import { reportError, withErrorReporting } from 'src/libs/error'
 import Events from 'src/libs/events'
+import * as Nav from 'src/libs/nav'
 import {
-  getConvertedRuntimeStatus, getConvertedAppStatus,
+  getConvertedAppStatus,
+  getConvertedRuntimeStatus,
   getCurrentApp,
   getCurrentRuntime,
-  getGalaxyCostTextChildren, getIsAppBusy, isCurrentGalaxyDiskDetaching, persistentDiskCost,
-  runtimeCost, getIsRuntimeBusy
+  getGalaxyCostTextChildren,
+  getIsAppBusy,
+  getIsRuntimeBusy,
+  isCurrentGalaxyDiskDetaching,
+  persistentDiskCost,
+  runtimeCost
 } from 'src/libs/runtime-utils'
 import { cookieReadyStore } from 'src/libs/state'
 import * as Utils from 'src/libs/utils'
-import { formatUSD } from 'src/libs/utils'
-import * as Nav from 'src/libs/nav'
 
 
 const titleId = 'cloud-env-modal'
@@ -41,7 +45,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
   const noCompute = 'You do not have access to run analyses on this workspace.'
 
   const renderNewRuntimeModal = tool => h(NewRuntimeModalBase, {
-    isOpen: true,//viewMode === NEW_JUPYTER_MODE || viewMode === NEW_RSTUDIO_MODE,
+    isOpen: viewMode === NEW_JUPYTER_MODE || viewMode === NEW_RSTUDIO_MODE,
     isAnalysisMode: true,
     workspace,
     tool,
@@ -85,11 +89,10 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
     renderToolButtons(tools.galaxy.label)
   ])
 
-  //TODO shorthand margin and padding
-  const toolPanelStyles = { backgroundColor: 'white', marginBottom: '1rem', marginLeft: '1.5rem', marginRight: '1.5rem', paddingLeft: '1rem', paddingRight: '1rem', paddingBottom: '1rem', display: 'flex', flexDirection: 'column' }
-  const toolLabelStyles = { marginTop: '1rem', marginBottom: '.5rem', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }
+  const toolPanelStyles = { backgroundColor: 'white', margin: '0 1.5rem 1rem 1.5rem', padding: '0 1rem 1rem 1rem', display: 'flex', flexDirection: 'column' }
+  const toolLabelStyles = { margin: '1rem 0 0.5rem 0', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }
   const toolButtonDivStyles = { display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }
-  const toolButtonStyles = { flex: '1 1 0%', maxWidth: 100, display: 'flex', flexDirection: 'column', border: '.5px solid grey', borderRadius: 16, paddingRight: '.75rem', paddingLeft: '.75rem', paddingTop: '.5rem', paddingBottom: '.5rem', alignItems: 'center', fontWeight: 550, fontSize: 11, color: colors.accent() }
+  const toolButtonStyles = { flex: '1 1 0%', maxWidth: 100, display: 'flex', flexDirection: 'column', border: '.5px solid grey', borderRadius: 16, padding: '.5rem .75rem', alignItems: 'center', fontWeight: 550, fontSize: 11, color: colors.accent() }
 
   const currentRuntime = getCurrentRuntime(runtimes)
   const currentRuntimeStatus = getConvertedRuntimeStatus(currentRuntime)
@@ -102,7 +105,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
       'aria-label': `${toolLabel} Status`,
       hover: { backgroundColor: colors.accent(0.2) },
       tooltipDelay: 100,
-      //css takes the last thing if there are duplicate fields, the order here is important because all three things can specify color
+      // css takes the last thing if there are duplicate fields, the order here is important because all three things can specify color
       style: { ...toolButtonStyles, color: onClick && !disabled ? colors.accent() : colors.dark(0.7), ...style },
       onClick, disabled, ...props
     }, [
@@ -123,7 +126,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
     }
   }
 
-  //We assume here that button disabling is working properly, so the only thing to check is whether its galaxy or the current (assumed to be existing) runtime
+  // We assume here that button disabling is working properly, so the only thing to check is whether its galaxy or the current (assumed to be existing) runtime
   const startApp = toolLabel => Utils.cond([toolLabel === tools.galaxy.label, () => {
     const { googleProject, appName } = currentApp
     executeAndRefresh(toolLabel,
@@ -163,7 +166,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
   )
 
   const getIconFromRuntimeStatus = (toolLabel, status) => {
-    //We dont use Utils.switchCase here to support the 'fallthrough' functionality
+    // We dont use Utils.switchCase here to support the 'fallthrough' functionality
     switch (status) {
       case 'Stopped':
         return h(RuntimeIcon, {
@@ -223,7 +226,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
     }
   }
 
-  //TODO: build component around this logic for a multiple runtime approach. see getCostForTool for example usage
+  // TODO: multiple runtime: build component around this logic for a multiple runtime approach. see getCostForTool for example usage
   const getRuntimeForTool = toolLabel => Utils.cond([toolLabel === currentRuntimeTool, () => currentRuntime],
     [Utils.DEFAULT, () => undefined])
 
@@ -232,14 +235,14 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
     [tools.galaxy.label, () => galaxyLogo],
     [tools.RStudio.label, () => rstudioLogo])
 
-  //TODO this is a good example of how the code should look when multiple runtimes are allowed, over a tool-centric approach
+  // TODO: multiple runtime: this is a good example of how the code should look when multiple runtimes are allowed, over a tool-centric approach
   const getCostForTool = toolLabel => Utils.cond(
     [toolLabel === tools.galaxy.label, () => getGalaxyCostTextChildren(currentApp, galaxyDataDisks)],
     [getRuntimeForTool(toolLabel), () => {
       const runtime = getRuntimeForTool(toolLabel)
       const runtimeDisk = _.find({ id: runtime.runtimeConfig.persistentDiskId }, persistentDisks)
       const totalCost = runtimeCost(runtime) + runtimeDisk ? persistentDiskCost(runtimeDisk) : 0
-      return span([`${runtime.status} (${formatUSD(totalCost)} / hr)`])
+      return span([`${runtime.status} (${Utils.formatUSD(totalCost)} / hr)`])
     }],
     [Utils.DEFAULT, () => span(['None'])]
   )
@@ -250,13 +253,13 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
       const runtime = getRuntimeForTool(toolLabel)
       return runtime ?
         !canCompute || busy || getIsRuntimeBusy(runtime) :
-        !canCompute || busy || getIsRuntimeBusy(currentRuntime) //TODO:multiple runtimes: change this to not have the last check in the or
+        !canCompute || busy || getIsRuntimeBusy(currentRuntime) //TODO: multiple runtimes: change this to not have the last check in the or
     }]
   )
 
   const getToolLaunchClickableProps = toolLabel => {
     const doesCloudEnvForToolExist = currentRuntimeTool === toolLabel || (currentApp && toolLabel === tools.galaxy.label)
-    //TODO what does cookieReady do? Found it in the galaxy app launch code, is it needed here?
+    // TODO what does cookieReady do? Found it in the galaxy app launch code, is it needed here?
     const isToolBusy = toolLabel === tools.galaxy.label ? getIsAppBusy(currentApp) || currentApp?.status === 'ERROR' : getIsRuntimeBusy(currentRuntime) || currentRuntime?.status === 'ERROR'
     const isDisabled = !doesCloudEnvForToolExist || !cookieReady || !canCompute || busy || isToolBusy
     const baseProps = {
@@ -267,7 +270,11 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
         color: isDisabled ? colors.dark(0.7) : colors.accent()
       },
       hover: { backgroundColor: colors.accent(0.2) },
-      tooltip: doesCloudEnvForToolExist ? 'Launch' : 'No environment found',
+      tooltip: Utils.cond(
+        [doesCloudEnvForToolExist && !isDisabled, () => 'Launch'],
+        [doesCloudEnvForToolExist && isDisabled, () => 'Launch disabled'],
+        [Utils.DEFAULT, () => 'No environment found']
+      ),
       tooltipDelay: 100
     }
 
@@ -286,11 +293,10 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
         const applicationLaunchLink = Nav.getLink('workspace-application-launch', { namespace, name: workspaceName, application: toolLabel })
         return {
           ...baseProps,
-          href: applicationLaunchLink, //TODO: link
+          href: applicationLaunchLink,
           onClick: () => {
             (currentRuntime?.status === 'Stopped' ? () => startApp(toolLabel) : () => {})()
             onDismiss()
-            //TODO: metrics?
           }
         }
       }]
@@ -302,7 +308,7 @@ export const CloudEnvironmentModal = ({ isOpen, onDismiss, onSuccess, canCompute
     const doesCloudEnvForToolExist = currentRuntimeTool === toolLabel || (currentApp && toolLabel === tools.galaxy.label)
     return h(Fragment, [
       div({ style: toolPanelStyles }, [
-        //Label at the top for eacht ool
+        // Label at the top for each tool
         div({ style: toolLabelStyles }, [
           img({
             src: getToolIcon(toolLabel),

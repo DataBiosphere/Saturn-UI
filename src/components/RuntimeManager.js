@@ -21,8 +21,8 @@ import * as Nav from 'src/libs/nav'
 import { clearNotification, notify } from 'src/libs/notifications'
 import {
   appIsSettingUp,
-  getConvertedRuntimeStatus,
   getConvertedAppStatus,
+  getConvertedRuntimeStatus,
   getCurrentApp,
   getCurrentRuntime,
   persistentDiskCost,

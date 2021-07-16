@@ -1,15 +1,15 @@
 import { Fragment, useState } from 'react'
-import { div, h, hr, img, span } from 'react-hyperscript-helpers'
-import { Clickable, comingSoon, spinnerOverlay } from 'src/components/common'
+import { div, h } from 'react-hyperscript-helpers'
+import { Clickable, comingSoon } from 'src/components/common'
 import { icon } from 'src/components/icons'
+import { tools } from 'src/components/notebook-utils'
 import { makeMenuIcon, MenuButton, MenuTrigger } from 'src/components/PopupTrigger'
+import { Ajax } from 'src/libs/ajax'
 import colors, { terraSpecial } from 'src/libs/colors'
+import * as Nav from 'src/libs/nav'
+import { getCurrentRuntime, getIsRuntimeBusy } from 'src/libs/runtime-utils'
 import * as Style from 'src/libs/style'
 import { CloudEnvironmentModal } from 'src/pages/workspaces/workspace/notebooks/modals/CloudEnvironmentModal'
-import { getCurrentRuntime, getIsRuntimeBusy } from 'src/libs/runtime-utils'
-import { tools } from 'src/components/notebook-utils'
-import { Ajax } from 'src/libs/ajax'
-import * as Nav from 'src/libs/nav'
 
 
 const contextBarStyles = {

@@ -14,7 +14,7 @@ import colors from 'src/libs/colors'
 import { withErrorReporting } from 'src/libs/error'
 import Events, { extractWorkspaceDetails } from 'src/libs/events'
 import {
-  getCurrentApp, currentAttachedDataDisk, currentPersistentDisk, findMachineType, getGalaxyComputeCost,
+  currentAttachedDataDisk, currentPersistentDisk, findMachineType, getCurrentApp, getGalaxyComputeCost,
   getGalaxyDiskCost, RadioBlock
 } from 'src/libs/runtime-utils'
 import * as Style from 'src/libs/style'
